@@ -345,17 +345,17 @@ def start_next_stage(project_id: str, db: Session = Depends(get_db)):
     jt = job_type_for_status(status)
     if not jt:
         nxt = next_auto_status_after_user_gate(status)
-        if nxt:
-            try:
-                validate_user_gate_prerequisites(status, list(project.songs))
-            except PrerequisiteError as e:
-                raise HTTPException(400, str(e)) from e
-            validate_transition(status, nxt)
-            project.status = nxt.value
-            db.commit()
-            jt = job_type_for_status(nxt)
-        else:
+        if not nxt:
             raise HTTPException(400, "No automatic stage for current status")
+        try:
+            validate_user_gate_prerequisites(status, list(project.songs))
+        except PrerequisiteError as e:
+            raise HTTPException(400, str(e)) from e
+        validate_transition(status, nxt)
+        project.status = nxt.value
+        project.error_message = None
+        db.commit()
+        jt = job_type_for_status(nxt)
     if not jt:
         raise HTTPException(400, "No job for status")
     job = job_runner.start_job(project_id, jt)

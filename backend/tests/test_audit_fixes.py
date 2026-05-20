@@ -1,11 +1,10 @@
 from unittest.mock import patch
 
 import pytest
-from fastapi.testclient import TestClient
+from fastapi import HTTPException
 
 from app.enums import ProjectStatus, SongStatus
 from app.exceptions import CancelledJob, PrerequisiteError
-from app.main import app
 from app.state_machine import validate_user_gate_prerequisites
 
 
@@ -29,7 +28,7 @@ def test_awaiting_render_order_requires_unique_order():
 
 
 def test_stage_start_blocks_incomplete_candidates(db_session):
-    from app.database import get_db
+    from app.api.routes import start_next_stage
     from app.models import Project, ProjectAnime, Song
 
     project = Project(
@@ -68,15 +67,54 @@ def test_stage_start_blocks_incomplete_candidates(db_session):
     )
     db_session.commit()
 
-    def override_get_db():
-        yield db_session
+    with patch("app.api.routes.job_runner.start_job") as start_job:
+        with pytest.raises(HTTPException) as exc:
+            start_next_stage(project.id, db_session)
+        start_job.assert_not_called()
 
-    app.dependency_overrides[get_db] = override_get_db
-    client = TestClient(app)
-    resp = client.post(f"/api/projects/{project.id}/stage/start")
-    app.dependency_overrides.clear()
-    assert resp.status_code == 400
-    assert "selected candidate" in resp.json()["detail"].lower()
+    assert exc.value.status_code == 400
+    assert "selected candidate" in str(exc.value.detail).lower()
+
+
+def test_stage_start_blocks_invalid_render_order_without_starting_job(db_session):
+    from app.api.routes import start_next_stage
+    from app.models import Project, Song
+
+    project = Project(
+        title="Render Gate",
+        status=ProjectStatus.AWAITING_RENDER_ORDER.value,
+        songs_count=2,
+        song_types='["opening"]',
+    )
+    db_session.add(project)
+    db_session.flush()
+    songs = []
+    for i, title in enumerate(("Song A", "Song B")):
+        song = Song(
+            project_id=project.id,
+            anime_mal_id=1,
+            anime_name="Anime A",
+            song_type="opening",
+            song_number=1,
+            song_title=title,
+            raw_theme_text="OP1",
+            render_order=i,
+            selected_candidate_id="candidate-id",
+        )
+        db_session.add(song)
+        songs.append(song)
+    db_session.commit()
+    for song in songs:
+        song.render_order = 0
+
+    with db_session.no_autoflush:
+        with patch("app.api.routes.job_runner.start_job") as start_job:
+            with pytest.raises(HTTPException) as exc:
+                start_next_stage(project.id, db_session)
+            start_job.assert_not_called()
+
+    assert exc.value.status_code == 400
+    assert "render order" in str(exc.value.detail).lower()
 
 
 def test_run_download_requires_all_candidates(db_session):
@@ -139,6 +177,41 @@ def test_cancelled_job_not_failed(db_session):
     assert project is not None
     assert job.status == "cancelled"
     assert project.status == ProjectStatus.CANCELLED.value
+
+
+def test_recover_stale_pipeline_jobs(db_session):
+    from datetime import datetime, timedelta, timezone
+    from unittest.mock import patch
+
+    from app.jobs.runner import recover_stale_pipeline_jobs
+    from app.models import AppLock, Job, Project
+
+    project = Project(title="Stale", status=ProjectStatus.DOWNLOADING.value, song_types='["opening"]')
+    db_session.add(project)
+    db_session.flush()
+    job = Job(project_id=project.id, type="download", status="running")
+    db_session.add(job)
+    db_session.flush()
+    lock = AppLock(
+        id="global_pipeline",
+        running_project_id=project.id,
+        running_job_id=job.id,
+        last_heartbeat_at=datetime.now(timezone.utc) - timedelta(seconds=9999),
+    )
+    db_session.merge(lock)
+    db_session.commit()
+
+    with patch.object(db_session, "close"), patch(
+        "app.jobs.runner.SessionLocal", side_effect=lambda: db_session
+    ):
+        assert recover_stale_pipeline_jobs() == 1
+    db_session.expire_all()
+    job = db_session.get(Job, job.id)
+    project = db_session.get(Project, project.id)
+    lock = db_session.get(AppLock, "global_pipeline")
+    assert job.status == "failed"
+    assert project.status == ProjectStatus.FAILED.value
+    assert lock.running_job_id is None
 
 
 def test_stale_lock_not_stolen_while_heartbeating(db_session):
