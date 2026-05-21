@@ -59,10 +59,10 @@ export default function CompletedOutput({
             src={`/api/projects/${projectId}/output/download`}
           />
           {project.output_path && (
-            <p className="mt-3 inline-flex items-center gap-2 text-xs text-emerald-100/70">
+            <span className="mt-3 inline-flex items-center gap-2 text-xs text-muted">
               <ExternalLink size={12} aria-hidden="true" />
               {project.output_path}
-            </p>
+            </span>
           )}
         </>
       ) : (

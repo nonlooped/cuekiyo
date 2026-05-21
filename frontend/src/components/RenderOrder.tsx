@@ -45,7 +45,7 @@ export default function RenderOrder({ projectId, onDone }: { projectId: string; 
   const [songs, setSongs] = useState<Song[]>([]);
   const [viewMap, setViewMap] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
-  const [justSorted, setJustSorted] = useState(false);
+  const [sortKey, setSortKey] = useState(0);
   const prevOrder = useRef<Song[]>([]);
 
   useEffect(() => {
@@ -59,7 +59,7 @@ export default function RenderOrder({ projectId, onDone }: { projectId: string; 
       }
       setViewMap(vm);
       setLoading(false);
-    });
+    }).catch(() => setLoading(false));
   }, [projectId]);
 
   const sensors = useSensors(
@@ -78,18 +78,18 @@ export default function RenderOrder({ projectId, onDone }: { projectId: string; 
   const autoSort = () => {
     prevOrder.current = songs;
     setSongs([...songs].sort((a, b) => (viewMap[b.id] ?? 0) - (viewMap[a.id] ?? 0)));
-    setJustSorted(true);
+    setSortKey((k) => k + 1);
   };
 
   useEffect(() => {
-    if (!justSorted) return;
-    const timer = setTimeout(() => setJustSorted(false), 8000);
+    if (sortKey === 0) return;
+    const timer = setTimeout(() => setSortKey(0), 8000);
     return () => clearTimeout(timer);
-  }, [justSorted]);
+  }, [sortKey]);
 
   const undoSort = () => {
+    setSortKey(0);
     setSongs(prevOrder.current);
-    setJustSorted(false);
   };
 
   const confirm = async () => {
@@ -122,7 +122,7 @@ export default function RenderOrder({ projectId, onDone }: { projectId: string; 
         </button>
       </div>
 
-      {justSorted && (
+      {sortKey > 0 && (
         <div className="flex items-center gap-3 border-b border-white/10 px-5 py-2.5">
           <span className="text-xs text-muted">Sorted by views</span>
           <button
