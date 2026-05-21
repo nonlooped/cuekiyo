@@ -1,15 +1,16 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { ArrowRight, Plus, Trash2, TriangleAlert } from "lucide-react";
 import { api } from "../api";
 import StatusBadge from "../components/StatusBadge";
-import NewProjectModal from "../components/NewProjectModal";
 import type { Project } from "../types";
+import { getProjectAction, getStatusCopy } from "../pipeline";
 
 export default function Dashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [binaries, setBinaries] = useState<Record<string, { available: boolean; detail: string }>>({});
-  const [showNew, setShowNew] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const load = () => {
     api.listProjects().then(setProjects).catch((e) => setError(String(e)));
@@ -22,52 +23,115 @@ export default function Dashboard() {
 
   return (
     <div>
+      <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-sm font-medium text-lime">Projects</p>
+          <h1 className="mt-2 text-4xl font-semibold tracking-normal">Your local MV studio</h1>
+          <p className="mt-4 max-w-2xl text-sm leading-6 text-muted">
+            Start a compilation, return to checkpoints that need taste, or open finished outputs.
+          </p>
+        </div>
+        <Link
+          to="/projects/new"
+          className="inline-flex w-fit items-center gap-2 rounded-xl bg-lime px-4 py-3 text-sm font-medium text-studio"
+        >
+          <Plus size={16} aria-hidden="true" />
+          New project
+        </Link>
+      </div>
+
       {missing.length > 0 && (
-        <div className="mb-4 rounded border border-amber-800 bg-amber-950/50 p-3 text-sm">
-          Missing tools: {missing.map(([k]) => k).join(", ")}. Install yt-dlp, ffmpeg, ffprobe,
-          and a font package such as <code className="text-amber-200">dejavu-fontconfig</code>.
+        <div className="mb-5 flex items-start gap-3 rounded-2xl border border-amber-300/30 bg-amber-300/10 p-4 text-sm text-amber-100">
+          <TriangleAlert size={18} className="mt-0.5 shrink-0" aria-hidden="true" />
+          <div>
+            <p className="font-medium">Some local tools are missing.</p>
+            <p className="mt-1 text-amber-100/80">
+              Missing: {missing.map(([k]) => k).join(", ")}. Install the tools before running a
+              full render.
+            </p>
+          </div>
         </div>
       )}
-      <div className="mb-6 flex justify-between">
-        <h2 className="text-xl font-semibold">Projects</h2>
-        <button
-          onClick={() => setShowNew(true)}
-          className="rounded bg-indigo-600 px-4 py-2 text-sm font-medium hover:bg-indigo-500"
-        >
-          New project
-        </button>
-      </div>
-      {error && <p className="text-red-400">{error}</p>}
-      <ul className="space-y-2">
+      {error && <p className="mb-4 rounded-xl border border-red-300/30 bg-red-300/10 p-3 text-sm text-red-200">{error}</p>}
+      <ul className="space-y-3">
         {projects.map((p) => (
           <li
             key={p.id}
-            className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3"
+            className="rounded-2xl border border-white/10 bg-panel/70 p-4 transition hover:border-white/20"
           >
-            <Link to={`/projects/${p.id}`} className="font-medium hover:text-indigo-300">
-              {p.title}
-            </Link>
-            <div className="flex items-center gap-3">
-              <StatusBadge status={p.status} />
-              <button
-                className="text-xs text-zinc-500 hover:text-red-400"
-                onClick={async () => {
-                  if (confirm("Delete project?")) {
-                    await api.deleteProject(p.id);
-                    load();
-                  }
-                }}
-              >
-                Delete
-              </button>
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="min-w-0">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <StatusBadge status={p.status} />
+                  <span className="text-xs text-muted">Updated {new Date(p.updated_at).toLocaleString()}</span>
+                </div>
+                <Link to={`/projects/${p.id}`} className="text-lg font-medium hover:text-lime">
+                  {p.title}
+                </Link>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
+                  {getStatusCopy(p.status).description}
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                {pendingDeleteId === p.id ? (
+                  <div className="flex flex-col items-end gap-1.5">
+                    <span className="text-xs text-muted">Delete this project?</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        className="rounded-xl border border-red-300/40 px-3 py-2 text-sm text-red-200 hover:bg-red-300/10"
+                        onClick={() => {
+                          api.deleteProject(p.id).then(() => { load(); setPendingDeleteId(null); });
+                        }}
+                      >
+                        Delete
+                      </button>
+                      <button
+                        className="rounded-xl border border-white/10 px-3 py-2 text-sm hover:bg-white/[0.06]"
+                        onClick={() => setPendingDeleteId(null)}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <Link
+                      to={`/projects/${p.id}`}
+                      className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-sm hover:bg-white/[0.06]"
+                    >
+                      {getProjectAction(p.status)}
+                      <ArrowRight size={15} aria-hidden="true" />
+                    </Link>
+                    <button
+                      className="grid size-10 place-items-center rounded-xl border border-white/10 text-muted hover:border-red-300/40 hover:text-red-200"
+                      aria-label={`Delete ${p.title}`}
+                      onClick={() => setPendingDeleteId(p.id)}
+                    >
+                      <Trash2 size={16} aria-hidden="true" />
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </li>
         ))}
         {projects.length === 0 && (
-          <p className="text-zinc-500">No projects yet. Create one to get started.</p>
+          <li className="rounded-2xl border border-white/10 bg-panel/60 p-8">
+            <h2 className="text-xl font-medium">No projects yet</h2>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-muted">
+              Create a project, pick a few anime, and the app will load themes before asking for
+              your first taste decision.
+            </p>
+            <Link
+              to="/projects/new"
+              className="mt-5 inline-flex items-center gap-2 rounded-xl bg-lime px-4 py-3 text-sm font-medium text-studio"
+            >
+              <Plus size={16} aria-hidden="true" />
+              Create first project
+            </Link>
+          </li>
         )}
       </ul>
-      {showNew && <NewProjectModal onClose={() => setShowNew(false)} onCreated={load} />}
     </div>
   );
 }

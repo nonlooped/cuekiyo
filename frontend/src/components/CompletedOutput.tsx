@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { CheckCircle2, Download, ExternalLink, FolderOpen } from "lucide-react";
 import { api } from "../api";
 import type { Project } from "../types";
 
@@ -25,34 +26,47 @@ export default function CompletedOutput({
     (project.output_path ? project.output_path.split("/").pop() : null);
 
   return (
-    <div className="rounded-lg border border-green-900/50 bg-green-950/20 p-4">
-      <h3 className="mb-2 font-medium text-green-300">Completed</h3>
+    <div className="rounded-2xl border border-white/10 bg-panel/70 p-5">
+      <div className="flex items-center gap-3">
+        <span className="grid size-10 place-items-center rounded-xl bg-lime/10 text-lime">
+          <CheckCircle2 size={18} aria-hidden="true" />
+        </span>
+        <h2 className="text-lg font-medium text-soft">Output ready</h2>
+      </div>
       {out?.exists ? (
         <>
-          <p className="mb-4 text-sm text-zinc-400">{filename ?? "final output"}</p>
-          <div className="flex flex-wrap gap-2">
+          <p className="mt-2 text-sm text-muted">{filename ?? "final output"}</p>
+          <div className="mt-5 flex flex-wrap gap-2">
             <a
               href={`/api/projects/${projectId}/output/download`}
-              className="rounded bg-green-700 px-4 py-2 text-sm"
+              className="inline-flex items-center gap-2 rounded-xl bg-lime px-4 py-3 text-sm font-medium text-studio"
               download
             >
+              <Download size={16} aria-hidden="true" />
               Download
             </a>
             <button
-              className="rounded border border-zinc-600 px-4 py-2 text-sm"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-3 text-sm hover:bg-white/[0.06]"
               onClick={() => api.openOutputFolder(projectId)}
             >
+              <FolderOpen size={16} aria-hidden="true" />
               Open folder
             </button>
           </div>
           <video
-            className="mt-4 max-h-96 w-full rounded"
+            className="mt-5 max-h-[520px] w-full rounded-2xl border border-white/10 bg-studio"
             controls
             src={`/api/projects/${projectId}/output/download`}
           />
+          {project.output_path && (
+            <p className="mt-3 inline-flex items-center gap-2 text-xs text-emerald-100/70">
+              <ExternalLink size={12} aria-hidden="true" />
+              {project.output_path}
+            </p>
+          )}
         </>
       ) : (
-        <p className="text-amber-400">Output file missing — check logs and retry.</p>
+        <p className="mt-2 text-sm text-muted">Output file missing. Check logs and retry.</p>
       )}
     </div>
   );
