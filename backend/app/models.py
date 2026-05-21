@@ -36,7 +36,7 @@ class Project(Base):
     clip_time: Mapped[float] = mapped_column(Float, default=10.0)
     target_width: Mapped[int] = mapped_column(Integer, default=1920)
     target_height: Mapped[int] = mapped_column(Integer, default=1080)
-    target_fps: Mapped[int] = mapped_column(Integer, default=30)
+    target_fps: Mapped[int] = mapped_column(Integer, default=24)
     target_aspect_ratio: Mapped[str] = mapped_column(String(16), default="16:9")
     encoder: Mapped[str] = mapped_column(String(32), default=Encoder.AUTO.value)
     audio_normalize: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -107,7 +107,7 @@ class Song(Base):
     artist: Mapped[str | None] = mapped_column(String(512), nullable=True)
     raw_theme_text: Mapped[str] = mapped_column(Text)
     selected_candidate_id: Mapped[str | None] = mapped_column(
-        String(36), ForeignKey("song_candidates.id"), nullable=True
+        String(36), ForeignKey("song_candidates.id", ondelete="SET NULL"), nullable=True
     )
     download_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     clean_clip_path: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -126,6 +126,7 @@ class Song(Base):
         back_populates="song",
         cascade="all, delete-orphan",
         foreign_keys="SongCandidate.song_id",
+        passive_deletes=True,
     )
 
 

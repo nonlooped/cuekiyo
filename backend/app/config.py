@@ -12,7 +12,11 @@ class Settings(BaseSettings):
     jikan_rate_limit_seconds: float = 0.35
     transition_seconds: float = 0.5
     fade_seconds: float = 0.5
+    ffmpeg_crf: int = 18
+    ffmpeg_cq: int = 19
     candidate_count: int = 3
+    youtube_workers: int = 2
+    ffmpeg_workers: int = 0
     ws_heartbeat_seconds: int = 30
     stale_lock_seconds: int = 120
 

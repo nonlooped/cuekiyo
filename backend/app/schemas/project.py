@@ -19,7 +19,7 @@ class ProjectCreate(BaseModel):
     clip_time: float = Field(default=10.0, ge=1.0, le=120.0)
     target_width: int = 1920
     target_height: int = 1080
-    target_fps: int = 30
+    target_fps: int = 24
     target_aspect_ratio: str = "16:9"
     encoder: Encoder = Encoder.AUTO
     audio_normalize: bool = True

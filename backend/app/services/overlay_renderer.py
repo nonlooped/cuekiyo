@@ -83,17 +83,21 @@ def build_overlay_content(
 
 
 def write_overlay_text_files(project_id: str, song_id: str, content: OverlayContent) -> dict[str, Path]:
-    base = resolve_project_path(project_id, "overlays", song_id)
-    base.parent.mkdir(parents=True, exist_ok=True)
-    paths = {
-        "anime": base.with_name(f"{song_id}_anime.txt"),
-        "song": base.with_name(f"{song_id}_song.txt"),
-        "meta": base.with_name(f"{song_id}_meta.txt"),
-    }
+    paths = overlay_text_file_paths(project_id, song_id)
+    paths["anime"].parent.mkdir(parents=True, exist_ok=True)
     paths["anime"].write_text(content.anime_name, encoding="utf-8")
     paths["song"].write_text(content.song_line, encoding="utf-8")
     paths["meta"].write_text(content.meta_line, encoding="utf-8")
     return paths
+
+
+def overlay_text_file_paths(project_id: str, song_id: str) -> dict[str, Path]:
+    base = resolve_project_path(project_id, "overlays", song_id)
+    return {
+        "anime": base.with_name(f"{song_id}_anime.txt"),
+        "song": base.with_name(f"{song_id}_song.txt"),
+        "meta": base.with_name(f"{song_id}_meta.txt"),
+    }
 
 
 def build_drawtext_filter(

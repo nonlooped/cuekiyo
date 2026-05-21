@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import pytest
 
-from app.services.ffmpeg_engine import build_concat_render_cmd, ensure_audio_clip, has_audio_stream
+from app.services.ffmpeg_engine import build_concat_render_cmd, build_render_cmd, ensure_audio_clip, has_audio_stream
 
 
 def test_build_concat_rejects_video_only(tmp_path):
