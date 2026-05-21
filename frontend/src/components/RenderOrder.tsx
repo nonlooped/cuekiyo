@@ -135,7 +135,11 @@ export default function RenderOrder({ projectId, onDone }: { projectId: string; 
       )}
 
       {loading ? (
-        <p className="p-5 text-sm text-muted">Loading sequence...</p>
+        <div className="space-y-2 p-5">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-14 animate-pulse rounded-xl bg-white/[0.07]" />
+          ))}
+        </div>
       ) : (
         <div className="p-5">
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>

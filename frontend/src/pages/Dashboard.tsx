@@ -5,6 +5,7 @@ import { api } from "../api";
 import StatusBadge from "../components/StatusBadge";
 import type { Project } from "../types";
 import { getProjectAction, getStatusCopy } from "../pipeline";
+import { errorToMessage } from "../lib/errors";
 
 export default function Dashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -13,7 +14,7 @@ export default function Dashboard() {
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const load = () => {
-    api.listProjects().then(setProjects).catch((e) => setError(String(e)));
+    api.listProjects().then(setProjects).catch((e) => setError(errorToMessage(e)));
     api.binaries().then(setBinaries).catch(() => {});
   };
 
