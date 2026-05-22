@@ -109,6 +109,10 @@ Copy [`.env.example`](.env.example) to `.env` if you need overrides. All setting
 3. Pick one candidate per song → download through overlay stages
 4. Confirm render order → final MP4
 
+## SmallCode skills
+
+Agent skills live under `.agents/`. SmallCode reads flat files from `.smallcode/skills/` instead. See [SMALLCODE_SKILLS.md](SMALLCODE_SKILLS.md) — keep the flat files in sync after editing `.agents/` skills, then use `/skill list` in SmallCode.
+
 ## Tests
 
 ```bash
