@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -66,11 +66,12 @@ export default function ProjectSetup() {
 	const [query, setQuery] = useState("");
 	const [results, setResults] = useState<AnimePick[]>([]);
 	const [animes, setAnimes] = useState<AnimePick[]>([]);
-	const [songTypes, setSongTypes] = useState<string[]>(["opening"]);
-	const [songsCount, setSongsCount] = useState(5);
-	const [clipTime, setClipTime] = useState(10);
-	const [encoder, setEncoder] = useState("auto");
-	const [audioNorm, setAudioNorm] = useState(true);
+	const [initialDefaults] = useState(loadProjectDefaults);
+	const [songTypes, setSongTypes] = useState(initialDefaults.songTypes);
+	const [songsCount, setSongsCount] = useState(initialDefaults.songsCount);
+	const [clipTime, setClipTime] = useState(initialDefaults.clipTime);
+	const [encoder, setEncoder] = useState(initialDefaults.encoder);
+	const [audioNorm, setAudioNorm] = useState(initialDefaults.audioNormalize);
 	const [advancedOpen, setAdvancedOpen] = useState(false);
 	const [searching, setSearching] = useState(false);
 	const [loading, setLoading] = useState(false);
@@ -79,15 +80,6 @@ export default function ProjectSetup() {
 	const [touchedAnimes, setTouchedAnimes] = useState(false);
 	const [triedSubmit, setTriedSubmit] = useState(false);
 	const [hasSearched, setHasSearched] = useState(false);
-
-	useEffect(() => {
-		const defaults = loadProjectDefaults();
-		setSongTypes(defaults.songTypes);
-		setSongsCount(defaults.songsCount);
-		setClipTime(defaults.clipTime);
-		setEncoder(defaults.encoder);
-		setAudioNorm(defaults.audioNormalize);
-	}, []);
 
 	const titleError = !title.trim() && (touchedTitle || triedSubmit);
 	const animeError = animes.length === 0 && (touchedAnimes || triedSubmit);

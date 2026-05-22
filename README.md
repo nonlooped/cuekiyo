@@ -13,8 +13,8 @@ Local web dashboard for building anime opening/ending music video compilations.
 
 ## Requirements
 
-- **Python** 3.11 or 3.12 ([`.python-version`](.python-version))
-- **Node.js** 20 LTS ([`.nvmrc`](.nvmrc))
+- **Python** 3.11–3.14 ([`.python-version`](.python-version))
+- **Node.js** 24 LTS ([`.nvmrc`](.nvmrc))
 - **System tools:** `yt-dlp`, `ffmpeg`, `ffprobe`
 - **Font** for overlays (e.g. DejaVu on Linux, Arial on Windows)
 

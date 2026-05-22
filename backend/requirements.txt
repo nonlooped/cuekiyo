@@ -1,4 +1,4 @@
-# Pinned runtime dependencies (Python 3.11–3.12)
+# Pinned runtime dependencies (Python 3.11–3.14)
 fastapi==0.136.1
 uvicorn[standard]==0.47.0
 sqlalchemy==2.0.49

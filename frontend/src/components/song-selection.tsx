@@ -52,7 +52,6 @@ export function SongSelection({
 	const [query, setQuery] = useState("");
 
 	useEffect(() => {
-		setLoading(true);
 		api
 			.listThemes(project.id)
 			.then(setThemes)

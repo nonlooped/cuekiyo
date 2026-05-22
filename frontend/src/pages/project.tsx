@@ -47,12 +47,6 @@ export default function ProjectPage() {
 	useEffect(refresh, [refresh]);
 
 	useEffect(() => {
-		setProgress((prev) =>
-			prev && prev.stage !== project?.status ? null : prev,
-		);
-	}, [project?.status]);
-
-	useEffect(() => {
 		if (!id) return;
 		let cancelled = false;
 		const ws = connectWebSocket((data) => {
@@ -83,6 +77,8 @@ export default function ProjectPage() {
 		() => RUNNING_STATUSES.has(project?.status ?? "DRAFT"),
 		[project?.status],
 	);
+	const displayedProgress =
+		progress && progress.stage === project?.status ? progress : null;
 	const statusCopy = project ? getStatusCopy(project.status) : null;
 
 	usePageMeta(project?.title);
@@ -126,7 +122,7 @@ export default function ProjectPage() {
 						<ProgressPanel
 							projectId={id}
 							projectStatus={project.status}
-							progress={progress}
+							progress={displayedProgress}
 							onCancel={() =>
 								api
 									.cancel(id)

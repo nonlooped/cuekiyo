@@ -33,35 +33,39 @@ export function CandidateSelection({
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
-	const refreshSongs = async () => {
-		setLoading(true);
-		setError(null);
-		const s = await api.listSongs(projectId);
-		const map: Record<string, Candidate[]> = {};
-		await Promise.all(
-			s.map(async (song) => {
-				map[song.id] = await api.listCandidates(projectId, song.id);
-			}),
-		);
-		setSongs(s);
-		setCandidates(map);
-		setActiveSongId(
-			(current) =>
-				current ??
-				s.find((song) => !song.selected_candidate_id)?.id ??
-				s[0]?.id ??
-				null,
-		);
-		setLoading(false);
-	};
-
 	useEffect(() => {
-		refreshSongs().catch((e) => {
-			const msg = errorToMessage(e);
-			setError(msg);
-			toast.error(msg);
-			setLoading(false);
-		});
+		let cancelled = false;
+		(async () => {
+			try {
+				const s = await api.listSongs(projectId);
+				const map: Record<string, Candidate[]> = {};
+				await Promise.all(
+					s.map(async (song) => {
+						map[song.id] = await api.listCandidates(projectId, song.id);
+					}),
+				);
+				if (cancelled) return;
+				setSongs(s);
+				setCandidates(map);
+				setActiveSongId(
+					(current) =>
+						current ??
+						s.find((song) => !song.selected_candidate_id)?.id ??
+						s[0]?.id ??
+						null,
+				);
+			} catch (e) {
+				if (cancelled) return;
+				const msg = errorToMessage(e);
+				setError(msg);
+				toast.error(msg);
+			} finally {
+				if (!cancelled) setLoading(false);
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
 	}, [projectId]);
 
 	const select = async (songId: string, candidateId: string) => {

@@ -6,7 +6,6 @@ import {
 	DEFAULT_PROJECT_DEFAULTS,
 	loadProjectDefaults,
 	saveProjectDefaults,
-	type ProjectDefaults,
 } from "@/lib/projectDefaults";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -40,16 +39,13 @@ import { Separator } from "@/components/ui/separator";
 import { NAV } from "@/lib/nav";
 
 export default function SettingsPage() {
-	const [defaults, setDefaults] = useState<ProjectDefaults>(
-		DEFAULT_PROJECT_DEFAULTS,
-	);
+	const [defaults, setDefaults] = useState(loadProjectDefaults);
 	const [binaries, setBinaries] = useState<
 		Record<string, { available: boolean; detail: string }>
 	>({});
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
-		setDefaults(loadProjectDefaults());
 		api
 			.binaries()
 			.then(setBinaries)

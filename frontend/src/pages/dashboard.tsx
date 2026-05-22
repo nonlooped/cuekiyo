@@ -120,8 +120,8 @@ export default function Dashboard() {
 	const [listFilter, setListFilter] = useState<ListFilter>("all");
 	const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
 
-	const load = () => {
-		setLoading(true);
+	const load = (options?: { showLoading?: boolean }) => {
+		if (options?.showLoading !== false) setLoading(true);
 		api
 			.listProjects()
 			.then(setProjects)
@@ -134,7 +134,32 @@ export default function Dashboard() {
 		api.binaries().then(setBinaries).catch(() => {});
 	};
 
-	useEffect(load, []);
+	useEffect(() => {
+		let cancelled = false;
+		api
+			.listProjects()
+			.then((data) => {
+				if (!cancelled) setProjects(data);
+			})
+			.catch((e) => {
+				if (cancelled) return;
+				const msg = errorToMessage(e);
+				setError(msg);
+				toast.error(msg);
+			})
+			.finally(() => {
+				if (!cancelled) setLoading(false);
+			});
+		api
+			.binaries()
+			.then((data) => {
+				if (!cancelled) setBinaries(data);
+			})
+			.catch(() => {});
+		return () => {
+			cancelled = true;
+		};
+	}, []);
 
 	useEffect(() => {
 		const handle = setTimeout(() => setDebouncedQuery(query), 200);
