@@ -2,14 +2,28 @@
   "name": "video-pipeline",
   "private": true,
   "version": "1.0.0",
+  "type": "module",
   "description": "Local anime MV pipeline — see README.md",
   "engines": {
     "node": ">=24.16.0 <25"
   },
   "scripts": {
-    "setup": "node scripts/setup.mjs",
+    "dev:backend": "cd backend && python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000",
+    "dev:frontend": "cd frontend && npm run dev",
+    "lint": "eslint frontend",
+    "format": "prettier --write \"frontend/**/*.{ts,tsx}\"",
     "test": "npm run test:backend && npm run test:frontend",
     "test:backend": "cd backend && python -m pytest -q",
-    "test:frontend": "cd frontend && npm run build"
+    "test:frontend": "cd frontend && npm test && npm run build"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.4.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.6.0",
+    "prettier": "^3.8.3",
+    "prettier-plugin-tailwindcss": "^0.8.0",
+    "typescript-eslint": "^8.59.4"
   }
 }

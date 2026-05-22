@@ -6,15 +6,15 @@ Local web dashboard for building anime opening/ending music video compilations.
 
 | Layer | Tech |
 |-------|------|
-| Frontend | React 19, Vite 7, TypeScript, Tailwind 4, shadcn/ui |
+| Frontend | React 19, Vite 8, TypeScript, Tailwind 4, shadcn/ui |
 | Backend | FastAPI, SQLite, SQLAlchemy |
 | Media | yt-dlp, ffmpeg/ffprobe (drawtext overlays) |
 | Metadata | Jikan API, YouTube via yt-dlp |
 
 ## Requirements
 
-- **Python** 3.11–3.14 ([`.python-version`](.python-version))
-- **Node.js** 24 LTS ([`.nvmrc`](.nvmrc))
+- **Python** 3.11–3.14
+- **Node.js** 24 LTS (`>=24.16.0`)
 - **System tools:** `yt-dlp`, `ffmpeg`, `ffprobe`
 - **Font** for overlays (e.g. DejaVu on Linux, Arial on Windows)
 
@@ -35,41 +35,6 @@ winget install Gyan.FFmpeg
 
 ## Quick start
 
-### Linux / macOS
-
-```bash
-git clone git@github.com:unloopedmido/video-pipeline.git
-cd video-pipeline
-chmod +x scripts/*.sh
-./scripts/setup.sh
-
-# Terminal 1
-./scripts/dev-backend.sh
-
-# Terminal 2
-./scripts/dev-frontend.sh
-```
-
-Open http://localhost:5173
-
-### Windows (PowerShell)
-
-```powershell
-git clone git@github.com:unloopedmido/video-pipeline.git
-cd video-pipeline
-.\scripts\setup.ps1
-
-# Terminal 1
-.\scripts\dev-backend.ps1
-
-# Terminal 2
-.\scripts\dev-frontend.ps1
-```
-
-Open http://localhost:5173
-
-## Manual setup
-
 ### Backend
 
 ```bash
@@ -86,6 +51,8 @@ pip install -r requirements-dev.txt
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
+Or from the repo root: `npm run dev:backend` (requires an activated venv on your `PATH`).
+
 ### Frontend
 
 ```bash
@@ -94,13 +61,19 @@ npm ci
 npm run dev
 ```
 
+Or from the repo root: `npm run dev:frontend`.
+
+Open http://localhost:5173
+
 API docs: http://127.0.0.1:8000/docs
 
 Health check: http://127.0.0.1:8000/api/system/binaries — all four entries should be available.
 
-## Environment
+## Settings
 
-Copy [`.env.example`](.env.example) to `.env` if you need overrides. All settings use the `AMV_` prefix (see `backend/app/config.py`).
+Pipeline tuning (data directory, worker counts, ffmpeg quality, Jikan rate limit, stale lock timeout) is configured in the app under **Settings → Pipeline**. Values are persisted to `data/settings.json`.
+
+Browser-local defaults for new compilations (song count, clip length, encoder, etc.) live on the **New compilation defaults** tab in the same page.
 
 ## Pipeline flow
 
@@ -109,9 +82,18 @@ Copy [`.env.example`](.env.example) to `.env` if you need overrides. All setting
 3. Pick one candidate per song → download through overlay stages
 4. Confirm render order → final MP4
 
-## SmallCode skills
+## Development
 
-Agent skills live under `.agents/`. SmallCode reads flat files from `.smallcode/skills/` instead. See [SMALLCODE_SKILLS.md](SMALLCODE_SKILLS.md) — keep the flat files in sync after editing `.agents/` skills, then use `/skill list` in SmallCode.
+Root-level tooling:
+
+```bash
+npm install          # eslint + prettier dev deps
+npm run lint
+npm run format
+npm test             # backend pytest + frontend build/tests
+```
+
+Frontend lint/format from `frontend/` also use the root configs.
 
 ## Tests
 
@@ -124,8 +106,8 @@ pytest -q
 ```bash
 cd frontend
 npm ci
-npm run build
 npm test
+npm run build
 ```
 
 CI runs both on push (see [`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
@@ -135,6 +117,7 @@ CI runs both on push (see [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
 | Path | Purpose |
 |------|---------|
 | `data/pipeline.db` | SQLite database |
+| `data/settings.json` | Pipeline settings (from Settings page) |
 | `data/projects/{id}/` | Downloads, clips, output |
 
 These paths are gitignored. Delete `data/pipeline.db` for a clean slate.

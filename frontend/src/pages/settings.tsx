@@ -7,6 +7,7 @@ import {
 	loadProjectDefaults,
 	saveProjectDefaults,
 } from "@/lib/projectDefaults";
+import type { PipelineSettings } from "@/types";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,16 +41,23 @@ import { NAV } from "@/lib/nav";
 
 export default function SettingsPage() {
 	const [defaults, setDefaults] = useState(loadProjectDefaults);
+	const [pipeline, setPipeline] = useState<PipelineSettings | null>(null);
 	const [binaries, setBinaries] = useState<
 		Record<string, { available: boolean; detail: string }>
 	>({});
 	const [error, setError] = useState<string | null>(null);
+	const [pipelineError, setPipelineError] = useState<string | null>(null);
+	const [savingPipeline, setSavingPipeline] = useState(false);
 
 	useEffect(() => {
 		api
 			.binaries()
 			.then(setBinaries)
 			.catch((e) => setError(errorToMessage(e)));
+		api
+			.getSettings()
+			.then(setPipeline)
+			.catch((e) => setPipelineError(errorToMessage(e)));
 	}, []);
 
 	const saveDefaults = () => {
@@ -67,18 +75,204 @@ export default function SettingsPage() {
 		toast.info("Defaults reset");
 	};
 
+	const savePipeline = async () => {
+		if (!pipeline) return;
+		setSavingPipeline(true);
+		setPipelineError(null);
+		try {
+			const saved = await api.updateSettings(pipeline);
+			setPipeline(saved);
+			toast.success("Pipeline settings saved");
+		} catch (e) {
+			setPipelineError(errorToMessage(e));
+			toast.error(errorToMessage(e));
+		} finally {
+			setSavingPipeline(false);
+		}
+	};
+
 	return (
 		<div className="flex flex-1 flex-col gap-8">
 			<PageHeader
 				title={NAV.settings}
-				description="Defaults for new compilations and health of local media tools on this machine."
+				description="Pipeline tuning, defaults for new compilations, and local media tool health."
 			/>
 
-			<Tabs defaultValue="defaults" className="w-full">
+			<Tabs defaultValue="pipeline" className="w-full">
 				<TabsList>
+					<TabsTrigger value="pipeline">Pipeline</TabsTrigger>
 					<TabsTrigger value="defaults">New compilation defaults</TabsTrigger>
 					<TabsTrigger value="tools">Local tools</TabsTrigger>
 				</TabsList>
+
+				<TabsContent value="pipeline" className="mt-6 max-w-xl">
+					{pipelineError && (
+						<Alert variant="destructive" className="mb-4">
+							<AlertDescription>{pipelineError}</AlertDescription>
+						</Alert>
+					)}
+					{pipeline ? (
+						<FieldGroup className="gap-6">
+							<Field>
+								<FieldLabel htmlFor="data-dir">Data directory</FieldLabel>
+								<Input
+									id="data-dir"
+									value={pipeline.data_dir}
+									onChange={(e) =>
+										setPipeline((c) =>
+											c ? { ...c, data_dir: e.target.value } : c,
+										)
+									}
+								/>
+							</Field>
+							<div className="grid gap-4 sm:grid-cols-2">
+								<Field>
+									<FieldLabel htmlFor="jikan-rate">
+										Jikan rate limit (s)
+									</FieldLabel>
+									<Input
+										id="jikan-rate"
+										type="number"
+										min={0.1}
+										max={10}
+										step={0.05}
+										value={pipeline.jikan_rate_limit_seconds}
+										onChange={(e) =>
+											setPipeline((c) =>
+												c
+													? {
+															...c,
+															jikan_rate_limit_seconds: Number(
+																e.target.value,
+															),
+														}
+													: c,
+											)
+										}
+									/>
+								</Field>
+								<Field>
+									<FieldLabel htmlFor="candidate-count">
+										Candidates per song
+									</FieldLabel>
+									<Input
+										id="candidate-count"
+										type="number"
+										min={1}
+										max={20}
+										value={pipeline.candidate_count}
+										onChange={(e) =>
+											setPipeline((c) =>
+												c
+													? { ...c, candidate_count: Number(e.target.value) }
+													: c,
+											)
+										}
+									/>
+								</Field>
+								<Field>
+									<FieldLabel htmlFor="youtube-workers">
+										YouTube workers
+									</FieldLabel>
+									<Input
+										id="youtube-workers"
+										type="number"
+										min={1}
+										max={16}
+										value={pipeline.youtube_workers}
+										onChange={(e) =>
+											setPipeline((c) =>
+												c
+													? { ...c, youtube_workers: Number(e.target.value) }
+													: c,
+											)
+										}
+									/>
+								</Field>
+								<Field>
+									<FieldLabel htmlFor="ffmpeg-workers">
+										FFmpeg workers (0 = auto)
+									</FieldLabel>
+									<Input
+										id="ffmpeg-workers"
+										type="number"
+										min={0}
+										max={16}
+										value={pipeline.ffmpeg_workers}
+										onChange={(e) =>
+											setPipeline((c) =>
+												c
+													? { ...c, ffmpeg_workers: Number(e.target.value) }
+													: c,
+											)
+										}
+									/>
+								</Field>
+								<Field>
+									<FieldLabel htmlFor="ffmpeg-crf">FFmpeg CRF</FieldLabel>
+									<Input
+										id="ffmpeg-crf"
+										type="number"
+										min={0}
+										max={51}
+										value={pipeline.ffmpeg_crf}
+										onChange={(e) =>
+											setPipeline((c) =>
+												c ? { ...c, ffmpeg_crf: Number(e.target.value) } : c,
+											)
+										}
+									/>
+								</Field>
+								<Field>
+									<FieldLabel htmlFor="ffmpeg-cq">FFmpeg CQ (NVENC)</FieldLabel>
+									<Input
+										id="ffmpeg-cq"
+										type="number"
+										min={0}
+										max={51}
+										value={pipeline.ffmpeg_cq}
+										onChange={(e) =>
+											setPipeline((c) =>
+												c ? { ...c, ffmpeg_cq: Number(e.target.value) } : c,
+											)
+										}
+									/>
+								</Field>
+								<Field className="sm:col-span-2">
+									<FieldLabel htmlFor="stale-lock">
+										Stale lock timeout (s)
+									</FieldLabel>
+									<Input
+										id="stale-lock"
+										type="number"
+										min={30}
+										max={3600}
+										value={pipeline.stale_lock_seconds}
+										onChange={(e) =>
+											setPipeline((c) =>
+												c
+													? {
+															...c,
+															stale_lock_seconds: Number(e.target.value),
+														}
+													: c,
+											)
+										}
+									/>
+								</Field>
+							</div>
+							<div className="flex gap-2">
+								<Button onClick={savePipeline} disabled={savingPipeline}>
+									{savingPipeline ? "Saving…" : "Save"}
+								</Button>
+							</div>
+						</FieldGroup>
+					) : (
+						<p className="text-sm text-muted-foreground">
+							Loading pipeline settings…
+						</p>
+					)}
+				</TabsContent>
 
 				<TabsContent value="defaults" className="mt-6 max-w-xl">
 					<FieldGroup className="gap-6">
