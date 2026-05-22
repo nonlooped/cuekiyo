@@ -10,7 +10,7 @@ from app.database import get_db
 from app.enums import JobType, ProjectStatus, SongStatus
 from app.jobs.runner import job_runner, release_lock_for_project
 from app.jobs.websocket_manager import ws_manager
-from app.models import Job, JobLog, Project, ProjectAnime, Song, SongCandidate, ThemeSong
+from app.models import AnimeCache, Job, JobLog, Project, ProjectAnime, Song, SongCandidate, ThemeSong
 from app.schemas.anime import AnimeSearchResult, ThemeSongOut
 from app.schemas.job import JobLogOut, JobOut
 from app.schemas.project import ProjectCreate, ProjectOut, ProjectUpdate, RenderOrderUpdate
@@ -28,7 +28,7 @@ from app.state_machine import (
     validate_transition,
     validate_user_gate_prerequisites,
 )
-from app.api.deps import project_to_out
+from app.api.deps import anime_image_map, project_to_out
 
 router = APIRouter()
 
@@ -55,7 +55,8 @@ def binaries():
 @router.get("/projects")
 def list_projects(db: Session = Depends(get_db)):
     projects = db.query(Project).order_by(Project.updated_at.desc()).all()
-    return [project_to_out(p) for p in projects]
+    images = anime_image_map(db, projects)
+    return [project_to_out(p, images) for p in projects]
 
 
 @router.post("/projects", status_code=201)
@@ -84,9 +85,23 @@ def create_project(body: ProjectCreate, db: Session = Depends(get_db)):
                 display_order=a.display_order,
             )
         )
+        if a.image_url:
+            cache = db.get(AnimeCache, a.anime_mal_id)
+            if cache is None:
+                db.add(
+                    AnimeCache(
+                        mal_id=a.anime_mal_id,
+                        title=a.anime_name,
+                        image_url=a.image_url,
+                        raw_json="{}",
+                    )
+                )
+            elif not cache.image_url:
+                cache.image_url = a.image_url
     db.commit()
     db.refresh(project)
-    return project_to_out(project)
+    images = anime_image_map(db, [project])
+    return project_to_out(project, images)
 
 
 @router.get("/projects/{project_id}")
@@ -94,7 +109,8 @@ def get_project(project_id: str, db: Session = Depends(get_db)):
     project = db.get(Project, project_id)
     if not project:
         raise HTTPException(404, "Project not found")
-    return project_to_out(project)
+    images = anime_image_map(db, [project])
+    return project_to_out(project, images)
 
 
 @router.patch("/projects/{project_id}")
@@ -113,7 +129,8 @@ def update_project(project_id: str, body: ProjectUpdate, db: Session = Depends(g
             setattr(project, field, value)
     db.commit()
     db.refresh(project)
-    return project_to_out(project)
+    images = anime_image_map(db, [project])
+    return project_to_out(project, images)
 
 
 @router.delete("/projects/{project_id}")

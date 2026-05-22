@@ -143,6 +143,7 @@ export default function ProjectSetup() {
             anime_mal_id: anime.mal_id,
             anime_name: anime.title,
             display_order: index,
+            image_url: anime.image_url ?? null,
           })),
           songs_count: songsCount,
           song_types: songTypes,

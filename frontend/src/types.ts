@@ -31,7 +31,12 @@ export interface Project {
   error_message: string | null;
   created_at: string;
   updated_at: string;
-  animes: { anime_mal_id: number; anime_name: string; display_order: number }[];
+  animes: {
+    anime_mal_id: number;
+    anime_name: string;
+    display_order: number;
+    image_url?: string | null;
+  }[];
 }
 
 export interface ThemeSong {

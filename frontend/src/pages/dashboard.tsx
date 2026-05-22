@@ -21,6 +21,7 @@ import { errorToMessage } from "@/lib/errors"
 import { NAV } from "@/lib/nav"
 import type { Project, ProjectStatus } from "@/types"
 import { PageHeader } from "@/components/page-header"
+import { ProjectThumbnail } from "@/components/project-thumbnail"
 import { StatusBadge } from "@/components/status-badge"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
@@ -329,7 +330,7 @@ export default function Dashboard() {
         {loading ? (
           <div className="flex flex-col gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-28 w-full rounded-xl" />
+              <Skeleton key={i} className="h-28 w-full rounded-xl sm:h-24" />
             ))}
           </div>
         ) : projects.length === 0 ? (
@@ -388,19 +389,19 @@ export default function Dashboard() {
                     className={cn(
                       "group relative overflow-hidden rounded-xl border transition-[border-color,background-color,box-shadow] duration-150",
                       cardAccent(copy.tone, needsYou, isCompleted),
-                      needsYou && "shadow-sm shadow-primary/10",
-                      isCompleted && "py-0"
+                      needsYou && "shadow-sm shadow-primary/10"
                     )}
                   >
                     <Link
                       to={href}
                       state={{ projectTitle: p.title }}
-                      className={cn(
-                        "flex flex-col gap-3 p-4 pr-14 sm:flex-row sm:items-center sm:gap-4 sm:p-5 sm:pr-16",
-                        isCompleted && "sm:py-4"
-                      )}
+                      className="grid grid-cols-[4rem_minmax(0,1fr)] grid-rows-[auto_auto] items-start gap-x-3 gap-y-2 p-4 pr-14 sm:grid-cols-[5rem_minmax(0,1fr)_auto] sm:grid-rows-1 sm:items-center sm:gap-x-4 sm:gap-y-0 sm:p-5 sm:pr-16"
                     >
-                      <div className="flex min-w-0 flex-1 flex-col gap-2">
+                      <ProjectThumbnail
+                        animes={p.animes}
+                        className="col-start-1 row-start-1 row-span-2 self-center sm:row-span-1"
+                      />
+                      <div className="col-start-2 row-start-1 flex min-w-0 flex-col gap-2">
                         <div className="flex flex-wrap items-center gap-2">
                           <StatusBadge status={p.status} />
                           <span className="text-[11px] text-muted-foreground tabular-nums">
@@ -440,7 +441,7 @@ export default function Dashboard() {
 
                       <span
                         className={cn(
-                          "inline-flex w-fit shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                          "col-start-2 row-start-2 inline-flex w-fit shrink-0 items-center gap-1 self-start rounded-full px-3 py-1.5 text-xs font-medium transition-colors sm:col-start-3 sm:row-start-1 sm:self-center",
                           needsYou
                             ? "bg-primary text-primary-foreground group-hover:bg-primary/90"
                             : "bg-muted/60 text-foreground group-hover:bg-primary/15 group-hover:text-primary"
@@ -455,7 +456,7 @@ export default function Dashboard() {
                       </span>
                     </Link>
 
-                    <div className="absolute top-3 right-3 sm:top-4 sm:right-4">
+                    <div className="absolute inset-y-0 right-3 flex items-center sm:right-4">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
@@ -480,7 +481,7 @@ export default function Dashboard() {
                               strokeWidth={2}
                               data-icon="inline-start"
                             />
-                            Remove compilation
+                            Remove
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

@@ -9,6 +9,7 @@ class ProjectAnimeIn(BaseModel):
     anime_mal_id: int
     anime_name: str
     display_order: int = 0
+    image_url: str | None = None
 
 
 class ProjectCreate(BaseModel):
@@ -42,6 +43,7 @@ class ProjectAnimeOut(BaseModel):
     anime_mal_id: int
     anime_name: str
     display_order: int
+    image_url: str | None = None
 
     model_config = {"from_attributes": True}
 
