@@ -381,9 +381,14 @@ def update_render_order(project_id: str, body: RenderOrderUpdate, db: Session = 
     if len(body.song_ids) != len(songs):
         raise HTTPException(400, "Must include all songs")
     song_map = {s.id: s for s in songs}
-    for i, sid in enumerate(body.song_ids):
+    for sid in body.song_ids:
         if sid not in song_map:
             raise HTTPException(400, f"Unknown song {sid}")
+    # Two-phase update avoids UNIQUE(project_id, render_order) violations during swaps.
+    for i, song in enumerate(songs):
+        song.render_order = -(i + 1)
+    db.flush()
+    for i, sid in enumerate(body.song_ids):
         song_map[sid].render_order = i
     db.commit()
     return {"ok": True}
