@@ -65,8 +65,9 @@ function BreadcrumbTrail({
 }
 
 function Breadcrumbs() {
-	const { pathname } = useLocation();
+	const { pathname, state } = useLocation();
 	const { meta } = usePageMetaContext();
+	const navTitle = (state as { projectTitle?: string } | null)?.projectTitle;
 
 	if (pathname === "/") {
 		return <BreadcrumbTrail crumbs={[{ label: NAV.projects }]} />;
@@ -81,11 +82,12 @@ function Breadcrumbs() {
 	}
 
 	if (pathname.startsWith("/projects/")) {
+		const label = meta.breadcrumb ?? navTitle ?? "Loading…";
 		return (
 			<BreadcrumbTrail
 				crumbs={[
 					{ label: NAV.projects, href: "/" },
-					{ label: meta.breadcrumb ?? "Compilation" },
+					{ label },
 				]}
 			/>
 		);

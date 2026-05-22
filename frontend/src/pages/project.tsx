@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { RefreshIcon } from "@hugeicons/core-free-icons";
@@ -30,6 +29,8 @@ import { usePageMeta } from "@/context/page-meta";
 
 export default function ProjectPage() {
 	const { id } = useParams<{ id: string }>();
+	const location = useLocation();
+	const navTitle = (location.state as { projectTitle?: string } | null)?.projectTitle;
 	const [project, setProject] = useState<Project | null>(null);
 	const [progress, setProgress] = useState<ProgressEvent | null>(null);
 	const [error, setError] = useState<string | null>(null);
@@ -81,7 +82,7 @@ export default function ProjectPage() {
 		progress && progress.stage === project?.status ? progress : null;
 	const statusCopy = project ? getStatusCopy(project.status) : null;
 
-	usePageMeta(project?.title);
+	usePageMeta(project?.title ?? navTitle);
 
 	if (!id) return null;
 
@@ -101,7 +102,9 @@ export default function ProjectPage() {
 		<div className="flex flex-1 flex-col gap-8">
 			<PageHeader
 				title={project.title}
-				description={statusCopy?.description}
+				description={
+					project.status === "COMPLETED" ? undefined : statusCopy?.description
+				}
 				meta={<CompilationSummary project={project} />}
 				actions={<StatusBadge status={project.status} />}
 			/>
@@ -189,10 +192,19 @@ export default function ProjectPage() {
 							<h2 className="font-heading text-xl font-semibold text-destructive">
 								Something went wrong
 							</h2>
+							<p className="max-w-prose text-sm text-muted-foreground">
+								The export stopped before finishing. You can retry the failed stage
+								after reviewing what went wrong.
+							</p>
 							{project.error_message && (
-								<pre className="overflow-x-auto rounded-lg border bg-background/60 p-3 text-xs leading-relaxed text-muted-foreground">
-									{project.error_message}
-								</pre>
+								<details className="rounded-lg border bg-background/60">
+									<summary className="cursor-pointer px-3 py-2 text-sm font-medium">
+										Technical details
+									</summary>
+									<pre className="overflow-x-auto border-t px-3 py-3 text-xs leading-relaxed text-muted-foreground">
+										{project.error_message}
+									</pre>
+								</details>
 							)}
 							<Button
 								disabled={retrying}

@@ -1,14 +1,3 @@
-export interface PipelineSettings {
-	data_dir: string;
-	jikan_rate_limit_seconds: number;
-	candidate_count: number;
-	youtube_workers: number;
-	ffmpeg_workers: number;
-	ffmpeg_crf: number;
-	ffmpeg_cq: number;
-	stale_lock_seconds: number;
-}
-
 export type ProjectStatus =
   | "DRAFT"
   | "LOADING_THEMES"

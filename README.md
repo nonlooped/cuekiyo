@@ -71,9 +71,11 @@ Health check: http://127.0.0.1:8000/api/system/binaries — all four entries sho
 
 ## Settings
 
-Pipeline tuning (data directory, worker counts, ffmpeg quality, Jikan rate limit, stale lock timeout) is configured in the app under **Settings → Pipeline**. Values are persisted to `data/settings.json`.
+**New compilation defaults** (song count, clip length, encoder, and similar) are saved in your browser on the **Settings** page.
 
-Browser-local defaults for new compilations (song count, clip length, encoder, etc.) live on the **New compilation defaults** tab in the same page.
+**Pipeline tuning** (data directory, worker counts, ffmpeg quality, Jikan rate limit, stale lock timeout) is configured via environment variables. Copy `.env.example` to `.env` in the repo root and restart the backend after changes.
+
+Legacy values in `data/settings.json` are still read if present, but env vars take precedence and the Settings UI no longer edits them.
 
 ## Pipeline flow
 
@@ -117,7 +119,7 @@ CI runs both on push (see [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
 | Path | Purpose |
 |------|---------|
 | `data/pipeline.db` | SQLite database |
-| `data/settings.json` | Pipeline settings (from Settings page) |
+| `data/settings.json` | Legacy pipeline settings (optional; prefer `.env`) |
 | `data/projects/{id}/` | Downloads, clips, output |
 
 These paths are gitignored. Delete `data/pipeline.db` for a clean slate.

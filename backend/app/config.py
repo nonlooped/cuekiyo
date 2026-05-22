@@ -1,10 +1,55 @@
 import json
+import os
 from pathlib import Path
 
 from pydantic import BaseModel
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _DEFAULT_DATA_DIR = _REPO_ROOT / "data"
+_ENV_FILE = _REPO_ROOT / ".env"
+
+
+def _load_dotenv() -> None:
+    if not _ENV_FILE.exists():
+        return
+    for line in _ENV_FILE.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        if not key or key in os.environ:
+            continue
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+            value = value[1:-1]
+        os.environ[key] = value
+
+
+def _env_str(key: str) -> str | None:
+    value = os.environ.get(key)
+    if value is None or value.strip() == "":
+        return None
+    return value.strip()
+
+
+def _env_path(key: str) -> Path | None:
+    raw = _env_str(key)
+    return Path(raw).expanduser() if raw else None
+
+
+def _env_int(key: str) -> int | None:
+    raw = _env_str(key)
+    if raw is None:
+        return None
+    return int(raw)
+
+
+def _env_float(key: str) -> float | None:
+    raw = _env_str(key)
+    if raw is None:
+        return None
+    return float(raw)
 
 
 class Settings(BaseModel):
@@ -39,7 +84,7 @@ def settings_file(data_dir: Path | None = None) -> Path:
     return (data_dir or _DEFAULT_DATA_DIR) / "settings.json"
 
 
-def load_settings() -> Settings:
+def _load_legacy_json() -> dict | None:
     for candidate_dir in (_DEFAULT_DATA_DIR,):
         path = settings_file(candidate_dir)
         if not path.exists():
@@ -49,31 +94,43 @@ def load_settings() -> Settings:
             raw["data_dir"] = Path(raw["data_dir"])
         if raw.get("db_path"):
             raw["db_path"] = Path(raw["db_path"])
-        loaded = Settings.model_validate(raw)
-        if loaded.data_dir != candidate_dir:
-            save_settings(loaded)
-        return loaded
-    return Settings(data_dir=_DEFAULT_DATA_DIR)
+        return raw
+    return None
 
 
-def save_settings(current: Settings) -> None:
-    current.data_dir.mkdir(parents=True, exist_ok=True)
-    path = settings_file(current.data_dir)
-    payload = current.model_dump(mode="json")
-    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+def _apply_env_overrides(data: dict) -> dict:
+    env_map: list[tuple[str, str, type]] = [
+        ("PIPELINE_DATA_DIR", "data_dir", Path),
+        ("PIPELINE_DB_PATH", "db_path", Path),
+        ("PIPELINE_JIKAN_BASE_URL", "jikan_base_url", str),
+        ("PIPELINE_JIKAN_RATE_LIMIT_SECONDS", "jikan_rate_limit_seconds", float),
+        ("PIPELINE_TRANSITION_SECONDS", "transition_seconds", float),
+        ("PIPELINE_FADE_SECONDS", "fade_seconds", float),
+        ("PIPELINE_FFMPEG_CRF", "ffmpeg_crf", int),
+        ("PIPELINE_FFMPEG_CQ", "ffmpeg_cq", int),
+        ("PIPELINE_CANDIDATE_COUNT", "candidate_count", int),
+        ("PIPELINE_YOUTUBE_WORKERS", "youtube_workers", int),
+        ("PIPELINE_FFMPEG_WORKERS", "ffmpeg_workers", int),
+        ("PIPELINE_WS_HEARTBEAT_SECONDS", "ws_heartbeat_seconds", int),
+        ("PIPELINE_STALE_LOCK_SECONDS", "stale_lock_seconds", int),
+    ]
+    for env_key, field, cast in env_map:
+        raw = _env_str(env_key)
+        if raw is None:
+            continue
+        data[field] = cast(raw) if cast is not str else raw
+    return data
 
 
-def apply_settings(update: dict) -> None:
-    data = settings.model_dump()
-    data.update(update)
-    if "data_dir" in data and isinstance(data["data_dir"], str):
-        data["data_dir"] = Path(data["data_dir"])
-    if data.get("db_path") and isinstance(data["db_path"], str):
-        data["db_path"] = Path(data["db_path"])
-    updated = Settings.model_validate(data)
-    for field in Settings.model_fields:
-        setattr(settings, field, getattr(updated, field))
-    save_settings(settings)
+def load_settings() -> Settings:
+    _load_dotenv()
+    legacy = _load_legacy_json()
+    if legacy:
+        data = legacy
+    else:
+        data = Settings(data_dir=_DEFAULT_DATA_DIR).model_dump()
+    data = _apply_env_overrides(data)
+    return Settings.model_validate(data)
 
 
 settings = load_settings()

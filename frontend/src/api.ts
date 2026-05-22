@@ -1,4 +1,4 @@
-import type { Candidate, Job, PipelineSettings, Project, Song, ThemeSong } from "./types";
+import type { Candidate, Job, Project, Song, ThemeSong } from "./types";
 
 const API = "/api";
 
@@ -78,12 +78,6 @@ export const api = {
 		request<Record<string, { available: boolean; detail: string }>>(
 			"/system/binaries",
 		),
-	getSettings: () => request<PipelineSettings>("/system/settings"),
-	updateSettings: (body: Partial<PipelineSettings>) =>
-		request<PipelineSettings>("/system/settings", {
-			method: "PATCH",
-			body: JSON.stringify(body),
-		}),
 	getOutput: (id: string) =>
 		request<{
 			output_path: string | null;

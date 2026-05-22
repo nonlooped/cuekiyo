@@ -98,9 +98,16 @@ function showsPreview(project: Project): string {
 	return `${names[0]} · ${names[1]} +${names.length - 2} more`;
 }
 
-function cardAccent(tone: StatusTone, needsYou: boolean): string {
+function cardAccent(
+	tone: StatusTone,
+	needsYou: boolean,
+	isCompleted: boolean,
+): string {
 	if (needsYou) {
 		return "border-primary/35 bg-primary/[0.06] hover:border-primary/55 hover:bg-primary/10";
+	}
+	if (isCompleted) {
+		return "border-border/70 bg-card/25 hover:border-primary/20 hover:bg-card/50";
 	}
 	if (tone === "success") {
 		return "border-border/80 bg-card/40 hover:border-primary/25 hover:bg-card/70";
@@ -285,24 +292,33 @@ export default function Dashboard() {
 					</InputGroup>
 
 					<div className="flex flex-wrap gap-2">
-						{filterOptions.map(({ id, label, count }) => (
-							<Button
-								key={id}
-								type="button"
-								variant={listFilter === id ? "default" : "outline"}
-								size="sm"
-								className="h-8 rounded-full px-3"
-								onClick={() => setListFilter(id)}
-							>
-								{label}
-								<Badge
-									variant={listFilter === id ? "secondary" : "outline"}
-									className="ml-1.5 h-5 min-w-5 justify-center px-1.5 text-[10px] tabular-nums"
+						{filterOptions.map(({ id, label, count }) => {
+							const disabled = id === "attention" && count === 0;
+							return (
+								<Button
+									key={id}
+									type="button"
+									variant={listFilter === id ? "default" : "outline"}
+									size="sm"
+									className="h-8 rounded-full px-3"
+									disabled={disabled}
+									title={
+										disabled
+											? "Nothing needs your input right now"
+											: undefined
+									}
+									onClick={() => setListFilter(id)}
 								>
-									{count}
-								</Badge>
-							</Button>
-						))}
+									{label}
+									<Badge
+										variant={listFilter === id ? "secondary" : "outline"}
+										className="ml-1.5 h-5 min-w-5 justify-center px-1.5 text-[10px] tabular-nums"
+									>
+										{count}
+									</Badge>
+								</Button>
+							);
+						})}
 					</div>
 				</div>
 			)}
@@ -333,9 +349,23 @@ export default function Dashboard() {
 						</EmptyContent>
 					</Empty>
 				) : filteredProjects.length === 0 ? (
-					<p className="py-8 text-center text-sm text-muted-foreground">
-						No compilations match your search or filter.
-					</p>
+					<div className="py-10 text-center">
+						{listFilter === "attention" ? (
+							<>
+								<p className="text-sm font-medium text-foreground">
+									Nothing needs your input
+								</p>
+								<p className="mt-1 text-sm text-muted-foreground">
+									Compilations waiting on song picks, clip review, or render order
+									will show up here.
+								</p>
+							</>
+						) : (
+							<p className="text-sm text-muted-foreground">
+								No compilations match your search or filter.
+							</p>
+						)}
+					</div>
 				) : (
 					<ul className="flex flex-col gap-3">
 						{filteredProjects.map((p) => {
@@ -343,6 +373,11 @@ export default function Dashboard() {
 							const action = getProjectAction(p.status);
 							const needsYou =
 								isUserGatedStatus(p.status) || p.status === "FAILED";
+							const isCompleted = p.status === "COMPLETED";
+							const isRunning =
+								!needsYou &&
+								!isCompleted &&
+								!["DRAFT", "CANCELLED"].includes(p.status);
 							const href = `/projects/${p.id}`;
 
 							return (
@@ -350,13 +385,18 @@ export default function Dashboard() {
 									<article
 										className={cn(
 											"group relative overflow-hidden rounded-xl border transition-[border-color,background-color,box-shadow] duration-150",
-											cardAccent(copy.tone, needsYou),
+											cardAccent(copy.tone, needsYou, isCompleted),
 											needsYou && "shadow-sm shadow-primary/10",
+											isCompleted && "py-0",
 										)}
 									>
 										<Link
 											to={href}
-											className="flex flex-col gap-3 p-4 pr-14 sm:flex-row sm:items-center sm:gap-4 sm:p-5 sm:pr-16"
+											state={{ projectTitle: p.title }}
+											className={cn(
+												"flex flex-col gap-3 p-4 pr-14 sm:flex-row sm:items-center sm:gap-4 sm:p-5 sm:pr-16",
+												isCompleted && "sm:py-4",
+											)}
 										>
 											<div className="flex min-w-0 flex-1 flex-col gap-2">
 												<div className="flex flex-wrap items-center gap-2">
@@ -366,23 +406,34 @@ export default function Dashboard() {
 													</span>
 												</div>
 												<div className="flex flex-col gap-0.5">
-													<h2 className="truncate font-heading text-base font-semibold tracking-tight sm:text-lg">
+													<h2
+														className={cn(
+															"truncate font-heading font-semibold tracking-tight",
+															isCompleted
+																? "text-sm sm:text-base"
+																: "text-base sm:text-lg",
+														)}
+													>
 														{p.title}
 													</h2>
 													<p className="truncate text-sm text-muted-foreground">
 														{showsPreview(p)}
 													</p>
 												</div>
-												<p
-													className={cn(
-														"text-sm",
-														needsYou
-															? "font-medium text-foreground"
-															: "text-muted-foreground",
-													)}
-												>
-													{copy.description}
-												</p>
+												{!isCompleted && (
+													<p
+														className={cn(
+															"text-sm",
+															needsYou
+																? "font-medium text-foreground"
+																: isRunning
+																	? "text-foreground/80"
+																	: "text-muted-foreground",
+														)}
+													>
+														{copy.description}
+													</p>
+												)}
 											</div>
 
 											<span
@@ -408,7 +459,7 @@ export default function Dashboard() {
 													<Button
 														variant="ghost"
 														size="icon"
-														className="size-8 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 data-[state=open]:opacity-100"
+														className="size-8 text-muted-foreground"
 														aria-label={`Actions for ${p.title}`}
 													>
 														<HugeiconsIcon icon={MoreVerticalIcon} strokeWidth={2} />

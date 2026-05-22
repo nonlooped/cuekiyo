@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -84,6 +84,38 @@ export default function ProjectSetup() {
 	const titleError = !title.trim() && (touchedTitle || triedSubmit);
 	const animeError = animes.length === 0 && (touchedAnimes || triedSubmit);
 
+	useEffect(() => {
+		const q = query.trim();
+		if (q.length < 2) {
+			setResults([]);
+			setHasSearched(false);
+			return;
+		}
+		let cancelled = false;
+		const handle = setTimeout(() => {
+			setError(null);
+			setSearching(true);
+			api
+				.searchAnime(q)
+				.then((data) => {
+					if (!cancelled) {
+						setResults(data);
+						setHasSearched(true);
+					}
+				})
+				.catch((e) => {
+					if (!cancelled) setError(errorToMessage(e));
+				})
+				.finally(() => {
+					if (!cancelled) setSearching(false);
+				});
+		}, 350);
+		return () => {
+			cancelled = true;
+			clearTimeout(handle);
+		};
+	}, [query]);
+
 	const search = async () => {
 		if (query.trim().length < 2) return;
 		setError(null);
@@ -121,7 +153,7 @@ export default function ProjectSetup() {
 				audio_normalize: audioNorm,
 			});
 			await api.loadThemes(project.id);
-			toast.success("Compilation created");
+			toast.success("Compilation started");
 			nav(`/projects/${project.id}`);
 		} catch (e) {
 			const msg = errorToMessage(e);
@@ -179,15 +211,18 @@ export default function ProjectSetup() {
 										void search();
 									}
 								}}
-								placeholder="Search anime by title"
+								placeholder="Search anime by title (2+ characters)"
 								aria-invalid={animeError}
 							/>
 							<InputGroupAddon align="inline-end">
 								<InputGroupButton onClick={() => void search()} disabled={searching}>
-									{searching ? "..." : "Search"}
+									{searching ? "Searching…" : "Search"}
 								</InputGroupButton>
 							</InputGroupAddon>
 						</InputGroup>
+						<FieldDescription>
+							Results appear as you type. Press Enter or Search to refresh.
+						</FieldDescription>
 						{hasSearched && results.length === 0 && (
 							<FieldDescription>No results for that query.</FieldDescription>
 						)}
@@ -205,6 +240,7 @@ export default function ProjectSetup() {
 												type="button"
 												variant="ghost"
 												className="h-auto w-full justify-start gap-3 px-2 py-2"
+												aria-label={`Add ${result.title_english || result.title}`}
 												onClick={() => {
 													if (!animes.some((a) => a.mal_id === result.mal_id)) {
 														setAnimes([...animes, result]);
@@ -256,6 +292,9 @@ export default function ProjectSetup() {
 								value={songsCount}
 								onChange={(e) => setSongsCount(Number(e.target.value))}
 							/>
+							<FieldDescription>
+								How many songs to include in this compilation.
+							</FieldDescription>
 						</Field>
 						<Field>
 							<FieldLabel htmlFor="clip-time">Clip length (s)</FieldLabel>
@@ -266,6 +305,9 @@ export default function ProjectSetup() {
 								value={clipTime}
 								onChange={(e) => setClipTime(Number(e.target.value))}
 							/>
+							<FieldDescription>
+								Seconds kept from each sourced clip in the final video.
+							</FieldDescription>
 						</Field>
 					</div>
 
@@ -319,7 +361,7 @@ export default function ProjectSetup() {
 						}
 					>
 						{loading && <LoadingSpinner data-icon="inline-start" />}
-						Create & load themes
+						Start compilation
 					</Button>
 				</FieldGroup>
 

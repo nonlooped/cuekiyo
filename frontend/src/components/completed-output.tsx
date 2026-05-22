@@ -36,6 +36,17 @@ export function CompletedOutput({
 		out?.output_filename ??
 		(out?.output_path ? out.output_path.split("/").pop() : null) ??
 		(project.output_path ? project.output_path.split("/").pop() : null);
+	const filePath = out?.output_path ?? project.output_path;
+
+	const copyPath = async () => {
+		if (!filePath) return;
+		try {
+			await navigator.clipboard.writeText(filePath);
+			toast.success("File path copied");
+		} catch {
+			toast.error("Could not copy path");
+		}
+	};
 
 	if (!out && !error) {
 		return <Skeleton className="aspect-video w-full max-w-3xl rounded-xl" />;
@@ -90,12 +101,12 @@ export function CompletedOutput({
 							<HugeiconsIcon icon={FolderOpenIcon} strokeWidth={2} data-icon="inline-start" />
 							Reveal in folder
 						</Button>
+						{filePath && (
+							<Button variant="ghost" size="lg" onClick={() => void copyPath()}>
+								Copy file path
+							</Button>
+						)}
 					</div>
-					{project.output_path && (
-						<p className="font-mono text-xs text-muted-foreground">
-							{project.output_path}
-						</p>
-					)}
 				</>
 			) : (
 				<p className="text-sm text-muted-foreground">

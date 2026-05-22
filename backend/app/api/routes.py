@@ -14,11 +14,10 @@ from app.models import Job, JobLog, Project, ProjectAnime, Song, SongCandidate, 
 from app.schemas.anime import AnimeSearchResult, ThemeSongOut
 from app.schemas.job import JobLogOut, JobOut
 from app.schemas.project import ProjectCreate, ProjectOut, ProjectUpdate, RenderOrderUpdate
-from app.schemas.settings import SettingsOut, SettingsUpdate
 from app.schemas.song import CandidateOut, CandidateSelectRequest, SongOut, SongSelectRequest
 from app.services import ffmpeg_engine, jikan_client, overlay_renderer
 from app.services.paths import project_dir
-from app.config import apply_settings, settings
+from app.config import settings
 from app.exceptions import PrerequisiteError
 from app.state_machine import (
     is_deletable,
@@ -51,33 +50,6 @@ def binaries():
         name: {"available": ok, "detail": detail}
         for name, (ok, detail) in checks.items()
     }
-
-
-def _settings_out() -> SettingsOut:
-    return SettingsOut(
-        data_dir=str(settings.data_dir.resolve()),
-        jikan_rate_limit_seconds=settings.jikan_rate_limit_seconds,
-        candidate_count=settings.candidate_count,
-        youtube_workers=settings.youtube_workers,
-        ffmpeg_workers=settings.ffmpeg_workers,
-        ffmpeg_crf=settings.ffmpeg_crf,
-        ffmpeg_cq=settings.ffmpeg_cq,
-        stale_lock_seconds=settings.stale_lock_seconds,
-    )
-
-
-@router.get("/system/settings")
-def get_settings():
-    return _settings_out()
-
-
-@router.patch("/system/settings")
-def update_settings(body: SettingsUpdate):
-    updates = body.model_dump(exclude_unset=True)
-    if not updates:
-        return _settings_out()
-    apply_settings(updates)
-    return _settings_out()
 
 
 @router.get("/projects")
