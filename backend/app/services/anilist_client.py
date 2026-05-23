@@ -1,5 +1,6 @@
 import asyncio
 import json
+import threading
 import time
 from typing import Any
 
@@ -8,7 +9,7 @@ import httpx
 from app.config import settings
 
 _last_request = 0.0
-_lock = asyncio.Lock()
+_lock = threading.Lock()
 
 SEARCH_QUERY = """
 query ($search: String!, $perPage: Int) {
@@ -39,12 +40,15 @@ query ($idMal: Int) {
 
 async def _rate_limit() -> None:
     global _last_request
-    async with _lock:
+    with _lock:
         now = time.monotonic()
         wait = settings.anilist_rate_limit_seconds - (now - _last_request)
         if wait > 0:
-            await asyncio.sleep(wait)
-        _last_request = time.monotonic()
+            _last_request = time.monotonic() + wait
+        else:
+            _last_request = time.monotonic()
+    if wait > 0:
+        await asyncio.sleep(wait)
 
 
 async def _graphql(
@@ -54,7 +58,6 @@ async def _graphql(
     resp = await client.post(
         settings.anilist_graphql_url,
         json={"query": query, "variables": variables},
-        timeout=30.0,
     )
     resp.raise_for_status()
     payload = resp.json()
@@ -82,8 +85,11 @@ def _normalize_media(media: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+_TIMEOUT = httpx.Timeout(connect=10.0, read=30.0, write=10.0, pool=10.0)
+
+
 async def search_anime(query: str, limit: int = 10) -> list[dict[str, Any]]:
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
         data = await _graphql(client, SEARCH_QUERY, {"search": query, "perPage": limit})
     results: list[dict[str, Any]] = []
     for media in data.get("Page", {}).get("media") or []:
@@ -94,7 +100,7 @@ async def search_anime(query: str, limit: int = 10) -> list[dict[str, Any]]:
 
 
 async def get_anime(mal_id: int) -> dict[str, Any]:
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
         data = await _graphql(client, GET_BY_MAL_QUERY, {"idMal": mal_id})
     media = data.get("Media")
     if not media or not media.get("idMal"):

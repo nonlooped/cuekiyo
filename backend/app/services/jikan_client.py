@@ -1,5 +1,6 @@
 import asyncio
 import json
+import threading
 import time
 from typing import Any
 
@@ -8,24 +9,27 @@ import httpx
 from app.config import settings
 
 _last_request = 0.0
-_lock = asyncio.Lock()
+_lock = threading.Lock()
 _MAX_429_RETRIES = 5
 
 
 async def _rate_limit() -> None:
     global _last_request
-    async with _lock:
+    with _lock:
         now = time.monotonic()
         wait = settings.jikan_rate_limit_seconds - (now - _last_request)
         if wait > 0:
-            await asyncio.sleep(wait)
-        _last_request = time.monotonic()
+            _last_request = time.monotonic() + wait
+        else:
+            _last_request = time.monotonic()
+    if wait > 0:
+        await asyncio.sleep(wait)
 
 
 async def _get(client: httpx.AsyncClient, path: str, retry_count: int = 0) -> dict[str, Any]:
     await _rate_limit()
     url = f"{settings.jikan_base_url}{path}"
-    resp = await client.get(url, timeout=30.0)
+    resp = await client.get(url)
     if resp.status_code == 429:
         if retry_count >= _MAX_429_RETRIES:
             resp.raise_for_status()
@@ -35,16 +39,19 @@ async def _get(client: httpx.AsyncClient, path: str, retry_count: int = 0) -> di
     return resp.json()
 
 
+_TIMEOUT = httpx.Timeout(connect=10.0, read=30.0, write=10.0, pool=10.0)
+
+
 async def search_anime(query: str, limit: int = 10) -> list[dict[str, Any]]:
     from urllib.parse import quote
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
         data = await _get(client, f"/anime?q={quote(query)}&limit={limit}")
         return data.get("data", [])
 
 
 async def get_anime(mal_id: int) -> dict[str, Any]:
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
         data = await _get(client, f"/anime/{mal_id}/full")
         return data.get("data", {})
 

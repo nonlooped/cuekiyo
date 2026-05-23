@@ -29,6 +29,7 @@ def _truncate(text: str, max_len: int = 72) -> str:
 def _font_candidates(bold: bool = True) -> list[str]:
     names = (
         [
+            "C:\\Windows\\Fonts\\arialbd.ttf",
             "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
             "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",
             "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf",
@@ -36,6 +37,7 @@ def _font_candidates(bold: bool = True) -> list[str]:
         ]
         if bold
         else [
+            "C:\\Windows\\Fonts\\arial.ttf",
             "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
             "/usr/share/fonts/TTF/DejaVuSans.ttf",
             "/usr/share/fonts/dejavu/DejaVuSans.ttf",

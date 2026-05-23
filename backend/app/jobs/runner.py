@@ -558,7 +558,12 @@ class JobRunner:
             self._report_progress(db, job, project, item_index=i, item_total=total, message=step)
 
             with _heartbeat_while_running(db):
-                anime_data = asyncio.run(anime_metadata.get_anime(pa.anime_mal_id))
+                try:
+                    anime_data = asyncio.run(anime_metadata.get_anime(pa.anime_mal_id))
+                except Exception as exc:
+                    raise PrerequisiteError(
+                        f"Failed to fetch metadata for {pa.anime_name} (MAL {pa.anime_mal_id}): {exc}"
+                    ) from exc
             fields = anime_metadata.anime_to_cache_fields(anime_data)
             cache = db.get(AnimeCache, pa.anime_mal_id)
             if cache:
@@ -568,7 +573,12 @@ class JobRunner:
             else:
                 db.add(AnimeCache(**fields, cached_at=_utcnow()))
             with _heartbeat_while_running(db):
-                openings, endings = asyncio.run(anime_metadata.get_themes(pa.anime_mal_id))
+                try:
+                    openings, endings = asyncio.run(anime_metadata.get_themes(pa.anime_mal_id))
+                except Exception as exc:
+                    raise PrerequisiteError(
+                        f"Failed to fetch themes for {pa.anime_name} (MAL {pa.anime_mal_id}): {exc}"
+                    ) from exc
             parsed = theme_parser.parse_themes(openings, endings, song_types)
             for p in parsed:
                 self._upsert_theme(db, pa.anime_mal_id, p)

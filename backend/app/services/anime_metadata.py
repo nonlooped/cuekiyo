@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import Any
 
@@ -83,10 +84,27 @@ async def get_anime(mal_id: int) -> dict[str, Any]:
     raise last_error
 
 
-async def get_themes(mal_id: int) -> tuple[list[str], list[str]]:
+async def get_themes(mal_id: int, retries: int = 2, backoff: float = 3.0) -> tuple[list[str], list[str]]:
     """Opening/ending themes are only available from Jikan."""
-    anime_data = await jikan_client.get_anime(mal_id)
-    return jikan_client.extract_themes(anime_data)
+    last_error: Exception | None = None
+    for attempt in range(retries):
+        try:
+            anime_data = await jikan_client.get_anime(mal_id)
+            return jikan_client.extract_themes(anime_data)
+        except Exception as exc:
+            last_error = exc
+            logger.warning(
+                "get_themes attempt %d/%d failed for mal_id=%s: %s",
+                attempt + 1,
+                retries,
+                mal_id,
+                exc,
+            )
+            if attempt < retries - 1:
+                await asyncio.sleep(backoff * (attempt + 1))
+    if last_error is not None:
+        raise last_error
+    return [], []
 
 
 def anime_to_cache_fields(anime_data: dict[str, Any]) -> dict[str, Any]:
