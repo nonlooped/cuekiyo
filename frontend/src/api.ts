@@ -91,6 +91,11 @@ export const api = {
 		request<{ jobId: string }>(`/projects/${id}/render-again`, {
 			method: "POST",
 		}),
+	reprocess: (id: string, stage: "overlay" | "render") =>
+		request<{ jobId: string }>(`/projects/${id}/reprocess`, {
+			method: "POST",
+			body: JSON.stringify({ stage }),
+		}),
 	cancel: (id: string) =>
 		request<{ ok: boolean }>(`/projects/${id}/cancel`, { method: "POST" }),
 	listJobs: (id: string) => request<Job[]>(`/projects/${id}/jobs`),

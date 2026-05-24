@@ -62,6 +62,14 @@ def is_editable(status: ProjectStatus) -> bool:
     return status in (ProjectStatus.DRAFT, ProjectStatus.SONG_SELECTION)
 
 
+def is_overlay_config_editable(status: ProjectStatus) -> bool:
+    return status in (
+        ProjectStatus.DRAFT,
+        ProjectStatus.SONG_SELECTION,
+        ProjectStatus.AWAITING_RENDER_ORDER,
+    )
+
+
 def is_deletable(status: ProjectStatus) -> bool:
     return status in (
         ProjectStatus.DRAFT,

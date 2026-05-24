@@ -7,6 +7,7 @@ import {
   Film01Icon,
   FolderOpenIcon,
   RefreshIcon,
+  ViewIcon,
 } from "@hugeicons/core-free-icons"
 import { api } from "@/api"
 import { errorToMessage } from "@/lib/errors"
@@ -43,7 +44,9 @@ export function CompletedOutput({
   } | null>(null)
   const [error, setError] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [overlayConfirmOpen, setOverlayConfirmOpen] = useState(false)
   const [rendering, setRendering] = useState(false)
+  const [reapplyingOverlay, setReapplyingOverlay] = useState(false)
 
   useEffect(() => {
     api
@@ -79,6 +82,20 @@ export function CompletedOutput({
       toast.error(errorToMessage(e))
     } finally {
       setRendering(false)
+    }
+  }
+
+  const startReapplyOverlay = async () => {
+    setReapplyingOverlay(true)
+    try {
+      await api.reprocess(projectId, "overlay")
+      setOverlayConfirmOpen(false)
+      toast.success("Re-applying overlay")
+      onRenderStarted?.()
+    } catch (e) {
+      toast.error(errorToMessage(e))
+    } finally {
+      setReapplyingOverlay(false)
     }
   }
 
@@ -193,15 +210,26 @@ export function CompletedOutput({
                 Copy file path
               </Button>
             )}
-            <Button
-              variant="outline"
-              size="lg"
-              className="gap-2 sm:ml-auto"
-              onClick={() => setConfirmOpen(true)}
-            >
-              <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} className="size-4" />
-              Render again
-            </Button>
+            <div className="flex flex-col gap-2 sm:ml-auto sm:flex-row">
+              <Button
+                variant="outline"
+                size="lg"
+                className="gap-2"
+                onClick={() => setOverlayConfirmOpen(true)}
+              >
+                <HugeiconsIcon icon={ViewIcon} strokeWidth={2} className="size-4" />
+                Re-apply overlay
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                className="gap-2"
+                onClick={() => setConfirmOpen(true)}
+              >
+                <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} className="size-4" />
+                Render again
+              </Button>
+            </div>
           </div>
         </>
       ) : (
@@ -213,16 +241,49 @@ export function CompletedOutput({
           <p className="text-sm text-muted-foreground">
             The file may have been moved or deleted. Check project logs or retry from a previous stage.
           </p>
-          <Button
-            variant="outline"
-            className="w-fit gap-2"
-            onClick={() => setConfirmOpen(true)}
-          >
-            <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} className="size-4" />
-            Render again
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => setOverlayConfirmOpen(true)}
+            >
+              <HugeiconsIcon icon={ViewIcon} strokeWidth={2} className="size-4" />
+              Re-apply overlay
+            </Button>
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => setConfirmOpen(true)}
+            >
+              <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} className="size-4" />
+              Render again
+            </Button>
+          </div>
         </div>
       )}
+
+      <AlertDialog open={overlayConfirmOpen} onOpenChange={setOverlayConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Re-apply overlay?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Reuses downloaded clips — only regenerates lower-thirds and
+              re-concatenates if needed. Source videos will not be downloaded
+              again.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => void startReapplyOverlay()}
+              disabled={reapplyingOverlay}
+            >
+              {reapplyingOverlay && <LoadingSpinner data-icon="inline-start" />}
+              Re-apply overlay
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>

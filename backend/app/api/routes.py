@@ -35,6 +35,7 @@ from app.exceptions import PrerequisiteError
 from app.state_machine import (
     is_deletable,
     is_editable,
+    is_overlay_config_editable,
     job_type_for_status,
     next_auto_status_after_user_gate,
     next_status_after_song_selection,
@@ -134,9 +135,18 @@ def update_project(project_id: str, body: ProjectUpdate, db: Session = Depends(g
     project = db.get(Project, project_id)
     if not project:
         raise HTTPException(404, "Project not found")
-    if not is_editable(ProjectStatus(project.status)):
-        raise HTTPException(400, "Project not editable in current status")
-    for field, value in body.model_dump(exclude_unset=True).items():
+    status = ProjectStatus(project.status)
+    updates = body.model_dump(exclude_unset=True)
+    if not is_editable(status):
+        if not is_overlay_config_editable(status):
+            raise HTTPException(400, "Project not editable in current status")
+        disallowed = set(updates.keys()) - {"overlay_config"}
+        if disallowed:
+            raise HTTPException(
+                400,
+                f"Cannot update {', '.join(sorted(disallowed))} in current status",
+            )
+    for field, value in updates.items():
         if field == "song_types" and value is not None:
             setattr(project, field, json.dumps([t.value for t in value]))
         elif field == "encoder" and value is not None:
