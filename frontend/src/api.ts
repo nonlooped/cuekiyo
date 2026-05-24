@@ -1,4 +1,20 @@
-import type { Candidate, Job, Project, Song, ThemeSong } from "./types";
+import type {
+	Candidate,
+	Job,
+	OverlayConfig,
+	Project,
+	Song,
+	ThemeSong,
+} from "./types";
+
+export type OverlayPreviewPayload = {
+	width?: number;
+	height?: number;
+	anime_name?: string;
+	song_line?: string;
+	meta_line?: string;
+	config: OverlayConfig;
+};
 
 const API = "/api";
 
@@ -109,6 +125,25 @@ export const api = {
 		request<{ folder: string }>(`/projects/${id}/output/open-folder`, {
 			method: "POST",
 		}),
+	previewOverlay: async (body: OverlayPreviewPayload) => {
+		const res = await fetch(`${API}/overlay/preview`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(body),
+		});
+		if (!res.ok) {
+			const err = await res.text();
+			throw new Error(err || res.statusText);
+		}
+		const blob = await res.blob();
+		const buffer = await blob.arrayBuffer();
+		const bytes = new Uint8Array(buffer);
+		let binary = "";
+		for (let i = 0; i < bytes.length; i++) {
+			binary += String.fromCharCode(bytes[i]!);
+		}
+		return { png_base64: btoa(binary) };
+	},
 };
 
 export function connectWebSocket(onEvent: (data: unknown) => void): WebSocket {

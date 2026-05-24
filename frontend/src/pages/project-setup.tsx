@@ -17,6 +17,8 @@ import {
 import { api } from "@/api"
 import { errorToMessage } from "@/lib/errors"
 import { loadProjectDefaults } from "@/lib/projectDefaults"
+import { OverlaySettings } from "@/components/overlay-settings"
+import type { OverlayConfig } from "@/types"
 import { PageHeader } from "@/components/page-header"
 import { LoadingSpinner } from "@/components/loading-spinner"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -64,6 +66,9 @@ export default function ProjectSetup() {
     initialDefaults.sourceMode
   )
   const [audioNorm, setAudioNorm] = useState(initialDefaults.audioNormalize)
+  const [overlayConfig, setOverlayConfig] = useState<OverlayConfig>(
+    initialDefaults.overlayConfig
+  )
   const [searching, setSearching] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [touchedTitle, setTouchedTitle] = useState(false)
@@ -168,6 +173,7 @@ export default function ProjectSetup() {
           encoder,
           audio_normalize: audioNorm,
           source_mode: sourceMode,
+          overlay_config: overlayConfig,
         })
         await api.loadThemes(project.id)
         toast.success("Compilation started")
@@ -652,6 +658,11 @@ export default function ProjectSetup() {
                 ))}
               </div>
             </div>
+
+            <OverlaySettings
+              config={overlayConfig}
+              onChange={setOverlayConfig}
+            />
 
             {/* Audio normalize — card toggle */}
             <button

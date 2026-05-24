@@ -1,3 +1,9 @@
+import {
+	DEFAULT_OVERLAY_CONFIG,
+	mergeOverlayConfig,
+} from "@/lib/overlay-config";
+import type { OverlayConfig } from "@/types";
+
 export interface ProjectDefaults {
 	songsCount: number;
 	songTypes: string[];
@@ -5,6 +11,7 @@ export interface ProjectDefaults {
 	encoder: string;
 	audioNormalize: boolean;
 	sourceMode: "auto" | "manual";
+	overlayConfig: OverlayConfig;
 }
 
 const STORAGE_KEY = "amv-project-defaults";
@@ -16,6 +23,7 @@ export const DEFAULT_PROJECT_DEFAULTS: ProjectDefaults = {
 	encoder: "auto",
 	audioNormalize: true,
 	sourceMode: "auto",
+	overlayConfig: DEFAULT_OVERLAY_CONFIG,
 };
 
 export function loadProjectDefaults(): ProjectDefaults {
@@ -33,6 +41,7 @@ export function loadProjectDefaults(): ProjectDefaults {
 			audioNormalize:
 				parsed.audioNormalize ?? DEFAULT_PROJECT_DEFAULTS.audioNormalize,
 			sourceMode: parsed.sourceMode ?? DEFAULT_PROJECT_DEFAULTS.sourceMode,
+			overlayConfig: mergeOverlayConfig(parsed.overlayConfig ?? {}),
 		};
 	} catch {
 		return DEFAULT_PROJECT_DEFAULTS;
