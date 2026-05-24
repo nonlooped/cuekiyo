@@ -1,6 +1,6 @@
 import type { ProjectStatus } from "./types"
 
-export type StageId =
+type StageId =
   | "setup"
   | "themes"
   | "songs"
@@ -121,7 +121,7 @@ const STATUS_COPY: Record<ProjectStatus, StatusCopy> = {
   },
   AWAITING_CANDIDATES: {
     label: "Review candidates",
-    description: "Pick the best source clip for each song.",
+    description: "Pick the best source clip for each song, or paste your own links.",
     tone: "attention",
   },
   DOWNLOADING: {

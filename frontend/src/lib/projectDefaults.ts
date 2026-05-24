@@ -4,6 +4,7 @@ export interface ProjectDefaults {
 	clipTime: number;
 	encoder: string;
 	audioNormalize: boolean;
+	sourceMode: "auto" | "manual";
 }
 
 const STORAGE_KEY = "amv-project-defaults";
@@ -14,6 +15,7 @@ export const DEFAULT_PROJECT_DEFAULTS: ProjectDefaults = {
 	clipTime: 10,
 	encoder: "auto",
 	audioNormalize: true,
+	sourceMode: "auto",
 };
 
 export function loadProjectDefaults(): ProjectDefaults {
@@ -30,6 +32,7 @@ export function loadProjectDefaults(): ProjectDefaults {
 			encoder: parsed.encoder ?? DEFAULT_PROJECT_DEFAULTS.encoder,
 			audioNormalize:
 				parsed.audioNormalize ?? DEFAULT_PROJECT_DEFAULTS.audioNormalize,
+			sourceMode: parsed.sourceMode ?? DEFAULT_PROJECT_DEFAULTS.sourceMode,
 		};
 	} catch {
 		return DEFAULT_PROJECT_DEFAULTS;

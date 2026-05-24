@@ -60,6 +60,9 @@ export default function ProjectSetup() {
   const [clipTime, setClipTime] = useState(initialDefaults.clipTime)
   const [clipCustom, setClipCustom] = useState(false)
   const [encoder, setEncoder] = useState(initialDefaults.encoder)
+  const [sourceMode, setSourceMode] = useState<"auto" | "manual">(
+    initialDefaults.sourceMode
+  )
   const [audioNorm, setAudioNorm] = useState(initialDefaults.audioNormalize)
   const [searching, setSearching] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -164,6 +167,7 @@ export default function ProjectSetup() {
           clip_time: clipTime,
           encoder,
           audio_normalize: audioNorm,
+          source_mode: sourceMode,
         })
         await api.loadThemes(project.id)
         toast.success("Compilation started")
@@ -534,6 +538,51 @@ export default function ProjectSetup() {
               <FieldDescription>
                 How many seconds from each clip make it into the final video.
               </FieldDescription>
+            </div>
+
+            {/* Clip sources — card grid */}
+            <div className="flex flex-col gap-3">
+              <span className="text-sm font-medium">Clip sources</span>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  aria-label="Find clips for me"
+                  aria-pressed={sourceMode === "auto"}
+                  onClick={() => setSourceMode("auto")}
+                  className={cn(
+                    "flex flex-col gap-0.5 rounded-lg border px-3 py-2.5 text-left transition-all duration-150",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                    sourceMode === "auto"
+                      ? "border-primary/40 bg-primary/[0.06] ring-1 ring-primary/20"
+                      : "border-border/60 bg-card/30 hover:border-border hover:bg-card/50"
+                  )}
+                >
+                  <span className="text-xs font-semibold">Find clips for me</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    Search YouTube and rank options per song
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  aria-label="I'll paste YouTube links"
+                  aria-pressed={sourceMode === "manual"}
+                  onClick={() => setSourceMode("manual")}
+                  className={cn(
+                    "flex flex-col gap-0.5 rounded-lg border px-3 py-2.5 text-left transition-all duration-150",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                    sourceMode === "manual"
+                      ? "border-primary/40 bg-primary/[0.06] ring-1 ring-primary/20"
+                      : "border-border/60 bg-card/30 hover:border-border hover:bg-card/50"
+                  )}
+                >
+                  <span className="text-xs font-semibold">
+                    I&apos;ll paste YouTube links
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    You pick the exact video for each song
+                  </span>
+                </button>
+              </div>
             </div>
 
             {/* Songs count — stepper */}

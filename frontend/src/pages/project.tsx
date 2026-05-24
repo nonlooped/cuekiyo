@@ -7,8 +7,9 @@ import { api, connectWebSocket } from "@/api"
 import { usePolling } from "@/hooks/usePolling"
 import { errorToMessage } from "@/lib/errors"
 import { RUNNING_STATUSES, getStatusCopy, isUserGatedStatus } from "@/pipeline"
-import type { ProgressEvent, Project, Song } from "@/types"
+import type { ProgressEvent, Project } from "@/types"
 import { CandidateSelection } from "@/components/candidate-selection"
+import { ManualSourceSelection } from "@/components/manual-source-selection"
 import { CompletedOutput } from "@/components/completed-output"
 import { CompilationSummary } from "@/components/compilation-summary"
 import { ProjectMorphHeader } from "@/components/project-morph-header"
@@ -166,9 +167,12 @@ export default function ProjectPage() {
           {project.status === "SONG_SELECTION" && (
             <SongSelection project={project} onDone={refresh} />
           )}
-          {project.status === "AWAITING_CANDIDATES" && (
+          {project.status === "AWAITING_CANDIDATES" &&
+            project.source_mode === "manual" ? (
+            <ManualSourceSelection projectId={id} onDone={refresh} />
+          ) : project.status === "AWAITING_CANDIDATES" ? (
             <CandidateSelection projectId={id} onDone={refresh} />
-          )}
+          ) : null}
           {project.status === "AWAITING_RENDER_ORDER" && (
             <RenderOrder projectId={id} onDone={refresh} />
           )}
