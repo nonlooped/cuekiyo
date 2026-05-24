@@ -1,6 +1,6 @@
 from collections.abc import Generator
 
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.config import settings
@@ -34,7 +34,34 @@ def get_db() -> Generator[Session, None, None]:
         db.close()
 
 
+def _ensure_sqlite_columns() -> None:
+    """Add columns introduced after first deploy (create_all does not ALTER)."""
+    inspector = inspect(engine)
+    if "projects" not in inspector.get_table_names():
+        return
+    existing = {col["name"] for col in inspector.get_columns("projects")}
+    additions: list[tuple[str, str]] = [
+        ("source_mode", "VARCHAR(16) NOT NULL DEFAULT 'auto'"),
+        ("overlay_config_json", "TEXT NOT NULL DEFAULT '{}'"),
+    ]
+    with engine.begin() as conn:
+        for name, ddl in additions:
+            if name not in existing:
+                conn.execute(text(f"ALTER TABLE projects ADD COLUMN {name} {ddl}"))
+
+    if "song_candidates" in inspector.get_table_names():
+        cand_cols = {col["name"] for col in inspector.get_columns("song_candidates")}
+        if "is_manual" not in cand_cols:
+            with engine.begin() as conn:
+                conn.execute(
+                    text(
+                        "ALTER TABLE song_candidates ADD COLUMN is_manual BOOLEAN NOT NULL DEFAULT 0"
+                    )
+                )
+
+
 def init_db() -> None:
     from app import models  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
+    _ensure_sqlite_columns()
