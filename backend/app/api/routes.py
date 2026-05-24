@@ -1,11 +1,13 @@
+import io
 import json
 import shutil
 import tempfile
+import zipfile
 from pathlib import Path
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, Response, StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -780,6 +782,37 @@ def download_song_clip(
     safe_title = sanitize_filename(song.song_title, max_len=40)
     filename = f"{safe_anime}_{song.song_type}{song.song_number}_{safe_title}_{variant}.mp4"
     return FileResponse(raw_path, media_type="video/mp4", filename=filename)
+
+
+@router.get("/projects/{project_id}/clips/download")
+def download_all_clips(
+    project_id: str,
+    variant: Literal["clean", "overlay"] = Query(default="overlay"),
+    db: Session = Depends(get_db),
+):
+    project = db.get(Project, project_id)
+    if not project:
+        raise HTTPException(404, "Project not found")
+    songs = sorted(project.songs, key=lambda s: s.render_order)
+    buf = io.BytesIO()
+    written = 0
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for i, song in enumerate(songs, start=1):
+            raw = song.overlayed_clip_path if variant == "overlay" else song.clean_clip_path
+            if not raw or not Path(raw).exists():
+                continue
+            arcname = f"{i:02d}_{sanitize_filename(song.anime_name)}_{variant}.mp4"
+            zf.write(raw, arcname)
+            written += 1
+    if written == 0:
+        raise HTTPException(404, f"No {variant} clips available")
+    buf.seek(0)
+    zip_name = f"{sanitize_filename(project.title)}_clips_{variant}.zip"
+    return StreamingResponse(
+        buf,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{zip_name}"'},
+    )
 
 
 @router.get("/projects/{project_id}/output/download")

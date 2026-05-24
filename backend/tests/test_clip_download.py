@@ -91,3 +91,25 @@ def test_download_clip_unknown_song(client, project_with_overlay_file):
     project, _song, _path = project_with_overlay_file
     res = client.get(f"/api/projects/{project.id}/songs/missing/clip?variant=overlay")
     assert res.status_code == 404
+
+
+def test_download_all_clips_zip(client, project_with_overlay_file):
+    project, _song, _path = project_with_overlay_file
+    res = client.get(f"/api/projects/{project.id}/clips/download?variant=overlay")
+    assert res.status_code == 200
+    assert res.headers["content-type"] == "application/zip"
+    assert len(res.content) > 0
+    assert "clips_overlay.zip" in res.headers.get("content-disposition", "")
+
+
+def test_download_all_clips_zip_empty(client, db_session):
+    project = Project(
+        title="Empty",
+        status=ProjectStatus.COMPLETED.value,
+        songs_count=0,
+        song_types='["opening"]',
+    )
+    db_session.add(project)
+    db_session.commit()
+    res = client.get(f"/api/projects/{project.id}/clips/download?variant=overlay")
+    assert res.status_code == 404

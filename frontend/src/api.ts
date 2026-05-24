@@ -169,6 +169,15 @@ export const api = {
 		}
 		return { png_base64: btoa(binary) };
 	},
+	songClipUrl: (
+		projectId: string,
+		songId: string,
+		variant: "clean" | "overlay" = "overlay",
+	) => `${API}/projects/${projectId}/songs/${songId}/clip?variant=${variant}`,
+	allClipsZipUrl: (
+		projectId: string,
+		variant: "clean" | "overlay" = "overlay",
+	) => `${API}/projects/${projectId}/clips/download?variant=${variant}`,
 };
 
 export function connectWebSocket(onEvent: (data: unknown) => void): WebSocket {

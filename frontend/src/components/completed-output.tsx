@@ -8,6 +8,7 @@ import {
   FolderOpenIcon,
   RefreshIcon,
   ViewIcon,
+  ArchiveArrowDownIcon,
 } from "@hugeicons/core-free-icons"
 import { api } from "@/api"
 import { errorToMessage } from "@/lib/errors"
@@ -184,6 +185,17 @@ export function CompletedOutput({
               >
                 <HugeiconsIcon icon={Download01Icon} strokeWidth={2} className="size-4" />
                 Open output
+              </a>
+            </Button>
+            <Button asChild variant="outline" size="lg" className="gap-2">
+              <a
+                href={api.allClipsZipUrl(projectId, "overlay")}
+                download
+                target="_blank"
+                rel="noreferrer"
+              >
+                <HugeiconsIcon icon={ArchiveArrowDownIcon} strokeWidth={2} data-icon="inline-start" className="size-4" />
+                Download all clips (ZIP)
               </a>
             </Button>
             <Button

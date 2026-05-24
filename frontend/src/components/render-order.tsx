@@ -20,6 +20,7 @@ import { CSS } from "@dnd-kit/utilities"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   ArrowDown01Icon,
+  Download01Icon,
   DragDropVerticalIcon,
 } from "@hugeicons/core-free-icons"
 import { api } from "@/api"
@@ -37,14 +38,17 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Skeleton } from "@/components/ui/skeleton"
+import { cn } from "@/lib/utils"
 
 function SortableRow({
+  projectId,
   song,
   views,
   index,
   count,
   onReorder,
 }: {
+  projectId: string
   song: Song
   views: number
   index: number
@@ -62,12 +66,15 @@ function SortableRow({
   const style = { transform: CSS.Transform.toString(transform), transition }
 
   return (
-    <li className="flex">
+    <li className="flex items-center gap-2">
       <button
         ref={setNodeRef}
         style={style}
         type="button"
-        className="flex w-full items-center gap-3 rounded-lg border border-border/80 bg-card/50 p-3 text-left shadow-sm"
+        className={cn(
+          "flex min-w-0 flex-1 items-center gap-3 rounded-lg border border-border/80 bg-card/50 p-3 text-left shadow-sm",
+          isDragging && "opacity-80",
+        )}
         {...attributes}
         onKeyDown={(event) => {
           if (isDragging) return
@@ -98,6 +105,17 @@ function SortableRow({
           {views.toLocaleString()}
         </span>
       </button>
+      <Button variant="ghost" size="sm" className="shrink-0" asChild>
+        <a
+          href={api.songClipUrl(projectId, song.id, "overlay")}
+          download
+          target="_blank"
+          rel="noreferrer"
+        >
+          <HugeiconsIcon icon={Download01Icon} strokeWidth={2} data-icon="inline-start" className="size-3.5" />
+          Download clip
+        </a>
+      </Button>
     </li>
   )
 }
@@ -244,6 +262,7 @@ export function RenderOrder({
             {songs.map((song, index) => (
               <SortableRow
                 key={song.id}
+                projectId={projectId}
                 song={song}
                 views={viewMap[song.id] ?? 0}
                 index={index}
