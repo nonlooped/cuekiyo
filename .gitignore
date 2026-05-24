@@ -14,11 +14,37 @@ backend/.pytest_cache/
 *.egg-info/
 dist/
 build/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
 
 # Node
 node_modules/
 frontend/dist/
 *.tsbuildinfo
+.eslintcache
+.prettiercache
+.vite/
+
+# Agent / local tooling output
+.agents/
+skills-lock.json
+.impeccable/
+.fallow/
+.superpowers/
+docs/superpowers/
+.cursor/
+
+# Git worktrees (superpowers, local experiments)
+.worktrees/
+worktrees/
+
+# Loose QA / browser-automation screenshots
+*-screenshot*.png
+step*.png
+/sidebar*.png
+frontend/sidebar*.png
 
 # IDE / OS
 .idea/
@@ -26,3 +52,4 @@ frontend/dist/
 *.swp
 .DS_Store
 Thumbs.db
+*.log
