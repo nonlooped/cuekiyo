@@ -20,6 +20,7 @@ from app.services import anime_metadata, ffmpeg_engine, overlay_renderer
 from app.services.paths import project_dir
 from app.services.youtube_url import fetch_video_metadata, metadata_to_candidate_result
 from app.schemas.overlay import OverlayPreviewRequest
+from app.schemas.reprocess import ReprocessRequest
 from app.schemas.song import (
     CandidateOut,
     CandidateSelectRequest,
@@ -588,6 +589,39 @@ def update_render_order(project_id: str, body: RenderOrderUpdate, db: Session = 
         song_map[sid].render_order = i
     db.commit()
     return {"ok": True}
+
+
+@router.post("/projects/{project_id}/reprocess")
+def reprocess_project(project_id: str, body: ReprocessRequest, db: Session = Depends(get_db)):
+    project = db.get(Project, project_id)
+    if not project:
+        raise HTTPException(404, "Project not found")
+    songs = list(project.songs)
+    if not songs:
+        raise HTTPException(400, "Project has no songs")
+
+    if body.stage == "render":
+        return render_again(project_id, db)
+
+    current = ProjectStatus(project.status)
+    allowed = {
+        ProjectStatus.COMPLETED,
+        ProjectStatus.AWAITING_RENDER_ORDER,
+        ProjectStatus.FAILED,
+    }
+    if current not in allowed:
+        raise HTTPException(400, "Cannot reprocess overlay in current status")
+    for song in songs:
+        if not song.clean_clip_path or not Path(song.clean_clip_path).exists():
+            raise HTTPException(400, f"Missing clean clip for {song.song_title}")
+        song.overlayed_clip_path = None
+        song.status = SongStatus.CUTTING.value
+    project.error_message = None
+    validate_transition(current, ProjectStatus.OVERLAYING)
+    project.status = ProjectStatus.OVERLAYING.value
+    db.commit()
+    job = job_runner.start_job(project_id, JobType.OVERLAY)
+    return {"jobId": job.id}
 
 
 @router.post("/projects/{project_id}/render-again")

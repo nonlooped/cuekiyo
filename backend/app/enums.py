@@ -92,9 +92,13 @@ PROJECT_TRANSITIONS: dict[ProjectStatus, set[ProjectStatus]] = {
     ProjectStatus.PROBING_NORMALIZING: {ProjectStatus.CUTTING, ProjectStatus.FAILED},
     ProjectStatus.CUTTING: {ProjectStatus.OVERLAYING, ProjectStatus.FAILED},
     ProjectStatus.OVERLAYING: {ProjectStatus.AWAITING_RENDER_ORDER, ProjectStatus.FAILED},
-    ProjectStatus.AWAITING_RENDER_ORDER: {ProjectStatus.RENDERING, ProjectStatus.FAILED},
+    ProjectStatus.AWAITING_RENDER_ORDER: {
+        ProjectStatus.RENDERING,
+        ProjectStatus.OVERLAYING,
+        ProjectStatus.FAILED,
+    },
     ProjectStatus.RENDERING: {ProjectStatus.COMPLETED, ProjectStatus.FAILED},
-    ProjectStatus.COMPLETED: {ProjectStatus.RENDERING},
+    ProjectStatus.COMPLETED: {ProjectStatus.RENDERING, ProjectStatus.OVERLAYING},
     ProjectStatus.FAILED: set(),  # retry handled separately
     ProjectStatus.CANCELLED: set(),
 }
