@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1280, height=480" />
+    <title>Cuekiyo Cover</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Outfit:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: oklch(0.13 0.008 286);
+        --bg-elevated: oklch(0.17 0.008 286);
+        --fg: oklch(0.985 0 0);
+        --muted: oklch(0.72 0.015 286);
+        --subtle: oklch(0.52 0.012 286);
+        --primary: oklch(0.768 0.233 130.85);
+        --primary-dim: oklch(0.768 0.233 130.85 / 0.14);
+        --primary-glow: oklch(0.768 0.233 130.85 / 0.35);
+        --border: oklch(1 0 0 / 0.08);
+        --border-strong: oklch(1 0 0 / 0.12);
+        --font-heading: "Manrope", system-ui, sans-serif;
+        --font-body: "Outfit", system-ui, sans-serif;
+      }
+
+      html,
+      body {
+        width: 1280px;
+        height: 480px;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: var(--font-body);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .cover {
+        position: relative;
+        width: 1280px;
+        height: 480px;
+        display: grid;
+        grid-template-columns: 1fr 420px;
+        padding: 48px 56px 44px;
+        isolation: isolate;
+      }
+
+      .cover::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(
+            900px 420px at 18% 22%,
+            var(--primary-dim),
+            transparent 62%
+          ),
+          radial-gradient(
+            520px 320px at 88% 78%,
+            oklch(0.25 0.04 286 / 0.45),
+            transparent 70%
+          ),
+          linear-gradient(
+            165deg,
+            oklch(0.145 0.01 286) 0%,
+            oklch(0.12 0.006 286) 100%
+          );
+        z-index: -2;
+      }
+
+      .grid-lines {
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(var(--border) 1px, transparent 1px),
+          linear-gradient(90deg, var(--border) 1px, transparent 1px);
+        background-size: 64px 64px;
+        mask-image: linear-gradient(
+          115deg,
+          oklch(0 0 0 / 0.55) 0%,
+          transparent 72%
+        );
+        z-index: -1;
+      }
+
+      .brand {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-width: 0;
+        padding-right: 32px;
+      }
+
+      .brand-top {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .mark {
+        display: grid;
+        place-items: center;
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-strong);
+        font-family: var(--font-heading);
+        font-size: 15px;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+        color: var(--primary);
+      }
+
+      .eyebrow {
+        font-size: 13px;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--subtle);
+      }
+
+      .wordmark {
+        margin-top: 28px;
+        font-family: var(--font-heading);
+        font-size: clamp(4rem, 7vw, 5.25rem);
+        font-weight: 800;
+        line-height: 0.95;
+        letter-spacing: -0.045em;
+      }
+
+      .wordmark .cue {
+        color: var(--primary);
+      }
+
+      .wordmark .kiyo {
+        color: var(--fg);
+      }
+
+      .lead {
+        margin-top: 22px;
+        max-width: 34rem;
+        font-size: 1.35rem;
+        line-height: 1.45;
+        font-weight: 500;
+        color: oklch(0.9 0.01 286);
+      }
+
+      .support {
+        margin-top: 12px;
+        max-width: 32rem;
+        font-size: 1rem;
+        line-height: 1.55;
+        color: var(--muted);
+      }
+
+      .tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 34px;
+      }
+
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        border-radius: 999px;
+        border: 1px solid var(--border-strong);
+        background: oklch(0.18 0.008 286 / 0.72);
+        font-size: 13px;
+        font-weight: 600;
+        color: oklch(0.88 0.01 286);
+        white-space: nowrap;
+      }
+
+      .tag.primary {
+        border-color: oklch(0.768 0.233 130.85 / 0.35);
+        background: oklch(0.768 0.233 130.85 / 0.12);
+        color: var(--primary);
+      }
+
+      .tag-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--primary);
+        box-shadow: 0 0 10px var(--primary-glow);
+      }
+
+      .preview {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 14px;
+        padding-top: 8px;
+      }
+
+      .preview::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: -28px;
+        width: 1px;
+        height: 72%;
+        transform: translateY(-50%);
+        background: linear-gradient(
+          180deg,
+          transparent,
+          var(--border-strong),
+          transparent
+        );
+      }
+
+      .flow {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--subtle);
+      }
+
+      .flow-step {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: oklch(0.16 0.007 286 / 0.8);
+        color: var(--muted);
+      }
+
+      .flow-step.active {
+        border-color: oklch(0.768 0.233 130.85 / 0.4);
+        background: oklch(0.768 0.233 130.85 / 0.1);
+        color: var(--primary);
+      }
+
+      .flow-arrow {
+        color: oklch(0.45 0.01 286);
+        font-size: 10px;
+      }
+
+      .card {
+        border: 1px solid var(--border-strong);
+        border-radius: 18px;
+        background: linear-gradient(
+          180deg,
+          oklch(0.19 0.008 286 / 0.95),
+          oklch(0.16 0.007 286 / 0.88)
+        );
+        overflow: hidden;
+        box-shadow:
+          0 1px 0 oklch(1 0 0 / 0.04) inset,
+          0 24px 48px oklch(0 0 0 / 0.28);
+      }
+
+      .card-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 16px 12px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .card-title {
+        font-family: var(--font-heading);
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+
+      .pill {
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        background: oklch(0.768 0.233 130.85 / 0.14);
+        color: var(--primary);
+      }
+
+      .card-body {
+        padding: 14px 16px 16px;
+        display: grid;
+        gap: 10px;
+      }
+
+      .track {
+        display: grid;
+        grid-template-columns: 52px 1fr auto;
+        gap: 12px;
+        align-items: center;
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: oklch(0.14 0.006 286 / 0.65);
+      }
+
+      .track.active {
+        border-color: oklch(0.768 0.233 130.85 / 0.28);
+        background: oklch(0.768 0.233 130.85 / 0.06);
+      }
+
+      .thumb {
+        width: 52px;
+        height: 36px;
+        border-radius: 8px;
+        background: linear-gradient(
+          135deg,
+          oklch(0.32 0.04 286),
+          oklch(0.22 0.03 130)
+        );
+        position: relative;
+        overflow: hidden;
+      }
+
+      .thumb::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          180deg,
+          transparent 35%,
+          oklch(0 0 0 / 0.35)
+        );
+      }
+
+      .track-copy {
+        min-width: 0;
+      }
+
+      .track-title {
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1.25;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .track-meta {
+        margin-top: 3px;
+        font-size: 11px;
+        color: var(--subtle);
+      }
+
+      .track-action {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--primary);
+      }
+
+      .accent-bar {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 3px;
+        background: linear-gradient(
+          90deg,
+          oklch(0.55 0.14 130),
+          var(--primary) 35%,
+          oklch(0.82 0.2 130) 68%,
+          oklch(0.55 0.14 130)
+        );
+      }
+    </style>
+  </head>
+  <body>
+    <div class="cover">
+      <div class="grid-lines" aria-hidden="true"></div>
+
+      <section class="brand">
+        <div>
+          <div class="brand-top">
+            <div class="mark">ck</div>
+            <p class="eyebrow">Local anime compilation studio</p>
+          </div>
+
+          <h1 class="wordmark">
+            <span class="cue">Cue</span><span class="kiyo">kiyo</span>
+          </h1>
+
+          <p class="lead">
+            Turn anime picks into a finished compilation on your machine.
+          </p>
+          <p class="support">
+            Three taste checkpoints. Sourcing, cuts, overlays, and render run
+            on their own.
+          </p>
+
+          <div class="tags">
+            <span class="tag primary"><span class="tag-dot"></span>local-first</span>
+            <span class="tag">MIT</span>
+            <span class="tag">ffmpeg</span>
+            <span class="tag">yt-dlp</span>
+            <span class="tag">FastAPI</span>
+            <span class="tag">React 19</span>
+            <span class="tag">SQLite</span>
+          </div>
+        </div>
+      </section>
+
+      <aside class="preview" aria-hidden="true">
+        <div class="flow">
+          <span class="flow-step">Start</span>
+          <span class="flow-arrow">→</span>
+          <span class="flow-step">Songs</span>
+          <span class="flow-arrow">→</span>
+          <span class="flow-step active">Clips</span>
+          <span class="flow-arrow">→</span>
+          <span class="flow-step">Render</span>
+        </div>
+
+        <article class="card">
+          <div class="card-head">
+            <h2 class="card-title">Review clips</h2>
+            <span class="pill">Needs you</span>
+          </div>
+          <div class="card-body">
+            <div class="track active">
+              <div class="thumb"></div>
+              <div class="track-copy">
+                <div class="track-title">Shinzou wo Sasageyo!</div>
+                <div class="track-meta">Attack on Titan · Opening</div>
+              </div>
+              <span class="track-action">Pick</span>
+            </div>
+            <div class="track">
+              <div class="thumb"></div>
+              <div class="track-copy">
+                <div class="track-title">The Rumbling</div>
+                <div class="track-meta">Attack on Titan · Opening</div>
+              </div>
+              <span class="track-action">Pick</span>
+            </div>
+            <div class="track">
+              <div class="thumb"></div>
+              <div class="track-copy">
+                <div class="track-title">Guren no Yumiya</div>
+                <div class="track-meta">Attack on Titan · Opening</div>
+              </div>
+              <span class="track-action">Pick</span>
+            </div>
+          </div>
+        </article>
+      </aside>
+
+      <div class="accent-bar" aria-hidden="true"></div>
+    </div>
+  </body>
+</html>
