@@ -5,7 +5,7 @@
 <p align="center">
   <a href="https://github.com/unloopedmido/cuekiyo/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/unloopedmido/cuekiyo/actions/workflows/ci.yml/badge.svg"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/unloopedmido/cuekiyo?style=flat-square"></a>
-  <a href="https://github.com/unloopedmido/cuekiyo"><img alt="Version" src="https://img.shields.io/badge/version-1.0.0-brightgreen?style=flat-square"></a>
+  <a href="https://github.com/unloopedmido/cuekiyo/releases"><img alt="Release" src="https://img.shields.io/github/v/release/unloopedmido/cuekiyo?style=flat-square&display_name=tag&sort=semver"></a>
   <img alt="Local-first" src="https://img.shields.io/badge/local--first-yes-8BC34A?style=flat-square">
   <img alt="Python" src="https://img.shields.io/badge/python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white">
   <img alt="Node.js" src="https://img.shields.io/badge/node-24_LTS-339933?style=flat-square&logo=nodedotjs&logoColor=white">
@@ -19,6 +19,23 @@
 Pick the shows, approve the songs, choose the clips, and export a titled compilation without uploading footage, paying for a cloud editor, or stitching everything together by hand.
 
 No cloud. No subscription. No upload step. Just your machine, your files, and a guided workflow that pauses only when you need to make a choice.
+
+### Contents
+
+- [Why Cuekiyo exists](#why-cuekiyo-exists)
+- [What it does](#what-it-does)
+- [See it in action](#see-it-in-action)
+- [Quick start](#quick-start)
+- [How the flow works](#how-the-flow-works)
+- [Built with](#built-with)
+- [Local-first by design](#local-first-by-design)
+- [Requirements](#requirements)
+- [Configuration](#configuration)
+- [Troubleshooting](#troubleshooting)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [Legal notice](#legal-notice)
+- [License](#license)
 
 ## Why Cuekiyo exists
 
@@ -44,34 +61,36 @@ Cuekiyo turns that into a guided local pipeline. You still make the taste decisi
 | Rebuilding the same edit repeatedly | Re-render clips without downloading everything again |
 | Losing track of project files | Each project stored under `data/projects/{id}/` |
 | Needing one fixed workflow | Paste your own links, import from MyAnimeList, or save project templates |
-| Automation guessing wrong on a source | Manual YouTube links per song, always available |
+| Automation guessing wrong on a source | Override any auto-pick with your own YouTube URL, per song |
+| CPU-bound encoding | NVIDIA NVENC auto-detected with a transparent CPU fallback |
 
 ## See it in action
 
 | Dashboard | Review clips | Finished output |
 | --- | --- | --- |
-| ![Dashboard](docs/assets/dashboard.png) | ![Review clips gate](docs/assets/project-gate.png) | ![Completed project](docs/assets/completed.png) |
+| ![Dashboard view showing project cards and status](docs/assets/dashboard.png) | ![Review-clips user gate with candidate thumbnails](docs/assets/project-gate.png) | ![Completed project page with final MP4](docs/assets/completed.png) |
 
 ## Quick start
 
-Requires **Python 3.11+**, **Node.js 24 LTS**, `ffmpeg`, `ffprobe`, and `yt-dlp`.
+Requires **Python 3.11+**, **Node.js 24 LTS**, `ffmpeg`, `ffprobe`, and `yt-dlp` on your `PATH`. See [Requirements](#requirements) for per-OS install commands.
 
 ```bash
 git clone https://github.com/unloopedmido/cuekiyo.git
 cd cuekiyo
-npm run setup
+npm run setup   # first run can take a few minutes (Python venv + npm install)
 npm run dev
 ```
 
-Open **http://localhost:5173** and create your first compilation.
+Open **<http://localhost:5173>** and create your first compilation.
 
-Want one URL after setup? Build once, then run the bundled server:
+### `npm run dev` vs `npm start`
 
-```bash
-npm start
-```
+| Command | When to use | URL |
+| --- | --- | --- |
+| `npm run dev` | Day-to-day development. Vite HMR for the frontend, auto-reload for the backend, two ports. | <http://localhost:5173> (UI), <http://127.0.0.1:8000> (API) |
+| `npm start` | Production-like single-port preview. Builds the frontend once and lets FastAPI serve it. | <http://127.0.0.1:8000> (UI + API) |
 
-Open **http://127.0.0.1:8000** (frontend and API on the same port).
+After either command starts, you can confirm your toolchain is healthy at <http://127.0.0.1:8000/api/system/binaries> — `yt-dlp`, `ffmpeg`, `ffprobe`, and overlay rendering should all report available.
 
 ## How the flow works
 
@@ -82,6 +101,15 @@ Open **http://127.0.0.1:8000** (frontend and API on the same port).
 
 Everything between those steps runs automatically. The app pauses only at song selection, candidate review, optional trim, and render order.
 
+## Built with
+
+- **Backend** — FastAPI, SQLAlchemy, SQLite, thread-based job runner with a global pipeline lock and WebSocket progress events
+- **Frontend** — React 19, Vite, Tailwind v4, shadcn/ui, React Router v7, `@dnd-kit`
+- **Media** — FFmpeg / FFprobe (NVENC auto-detected, CPU fallback), `yt-dlp`, YouTube heatmap analysis, Satori for HTML-to-PNG overlay rendering
+- **Metadata** — Jikan (MyAnimeList) and AniList GraphQL, with rate limiting and provider fallback
+
+Architectural details live in [`AGENTS.md`](AGENTS.md).
+
 ## Local-first by design
 
 Cuekiyo runs on your machine. Projects live in SQLite and on disk under `data/`. Nothing is uploaded to a service you do not control. Your compilations stay yours unless you export them.
@@ -91,9 +119,10 @@ That also means you bring the tools: Python, Node, `ffmpeg`, and `yt-dlp`. See [
 ## Requirements
 
 - **Python** 3.11+
-- **Node.js** 24 LTS (`>=24.16.0`)
-- **System tools:** `yt-dlp`, `ffmpeg`, `ffprobe`
-- **Font** for overlays (e.g. DejaVu on Linux, Arial on Windows)
+- **Node.js** 24 LTS (`>=24.16.0 <25`)
+- **System tools** — `yt-dlp`, `ffmpeg`, `ffprobe`
+- **Font for overlays** — DejaVu on Linux, the system Arial/Helvetica on Windows and macOS (preinstalled on both)
+- **Optional** — NVIDIA GPU with NVENC support for hardware-accelerated encoding (auto-detected, transparently falls back to `libx264` if unavailable)
 
 **Linux (Debian / Ubuntu)** — `sudo apt update && sudo apt install yt-dlp ffmpeg fonts-dejavu-core`  
 **macOS** — `brew install yt-dlp ffmpeg`  
@@ -124,16 +153,11 @@ If `yt-dlp` is not in your distro packages, install it from [yt-dlp releases](ht
 
 </details>
 
-Verify binaries: http://127.0.0.1:8000/api/system/binaries (`yt-dlp`, `ffmpeg`, `ffprobe`, and overlay rendering should all report available after `npm run dev` or `npm start`).
+## Configuration
 
-<details>
-<summary>Configuration</summary>
-
-- **Compilation defaults** (song count, clip length, encoder, etc.) are saved in your browser on the **Settings** page.
-- **Pipeline tuning** (workers, ffmpeg quality, metadata provider, rate limits) uses `.env`. Copy `.env.example` to `.env` and restart the backend.
-- **Anime metadata** can be switched between Jikan and AniList on Settings. Theme lists still come from Jikan.
-
-</details>
+- **Compilation defaults** (song count, clip length, encoder, etc.) are saved per-browser on the **Settings** page.
+- **Pipeline tuning** (workers, ffmpeg quality, metadata provider, rate limits) lives in `.env`. Copy `.env.example` to `.env` and restart the backend.
+- **Anime metadata** can be switched between Jikan and AniList on the Settings page. Theme song lists (opening/ending titles) always come from Jikan — AniList is used for metadata only.
 
 <details>
 <summary>Where Cuekiyo stores files</summary>
@@ -141,34 +165,86 @@ Verify binaries: http://127.0.0.1:8000/api/system/binaries (`yt-dlp`, `ffmpeg`, 
 | Path | Purpose |
 | --- | --- |
 | `data/pipeline.db` | SQLite database |
-| `data/settings.json` | Legacy pipeline settings (optional) |
+| `data/settings.json` | Persisted pipeline settings (written by the Settings page; `.env` still overrides) |
 | `data/projects/{id}/` | Downloads, clips, output |
 
 These paths are gitignored. Delete `data/pipeline.db` for a clean slate.
 
 </details>
 
+## Troubleshooting
+
 <details>
-<summary>Current v1 limitations</summary>
+<summary><code>ffmpeg</code>, <code>ffprobe</code>, or <code>yt-dlp</code> reported missing</summary>
+
+Visit <http://127.0.0.1:8000/api/system/binaries> to see exactly which binary is missing. The most common cause on Windows is `winget`-installed binaries not being on the current shell's `PATH` — open a new terminal or restart the machine. On macOS, confirm `brew --prefix`/bin is on your `PATH`.
+
+</details>
+
+<details>
+<summary>Port 5173 or 8000 already in use</summary>
+
+Free the port or override it. The frontend port can be changed with `cd frontend && npm run dev -- --port 5174`. The backend port comes from `scripts/run-backend.sh` — pass `--port 8001` (and update the Vite proxy if you do).
+
+</details>
+
+<details>
+<summary>NVENC errors during rendering</summary>
+
+Cuekiyo probes NVENC at startup and falls back to `libx264` automatically when probing fails. If you want to force CPU encoding, choose a `libx264` encoder in **Settings**. NVENC requires a recent NVIDIA driver and an FFmpeg build compiled with `--enable-nvenc`.
+
+</details>
+
+<details>
+<summary>Jikan or AniList rate-limited / 429</summary>
+
+Both clients are already rate-limited (`PIPELINE_JIKAN_RATE_LIMIT_SECONDS`, `PIPELINE_ANILIST_RATE_LIMIT_SECONDS` in `.env`). If you still see throttling, increase those values and restart the backend. Switching the provider on the Settings page can also help.
+
+</details>
+
+<details>
+<summary>Pipeline appears stuck</summary>
+
+Jobs run under a global pipeline lock with a heartbeat. If the backend crashes mid-job, the lock recovers automatically after `PIPELINE_STALE_LOCK_SECONDS` (default 120s). To force-clear, stop the backend and delete the `app_lock` row, or wipe `data/pipeline.db` for a full reset.
+
+</details>
+
+<details>
+<summary>Overlay not rendering</summary>
+
+Overlay rendering uses Node.js (Satori) under the hood. Confirm `npm run setup` completed without errors and that the binaries endpoint reports overlay rendering as available. Missing fonts also break overlays — install the font package listed under [Requirements](#requirements).
+
+</details>
+
+## Roadmap
+
+Tracked publicly via [GitHub issues](https://github.com/unloopedmido/cuekiyo/issues). Current direction:
+
+- Parallel project jobs (lift the global pipeline lock)
+- Richer concat / crossfade graph for 2+ clips
+- Smarter retry that picks up from the actual failed stage instead of inferring from the last failed job
+- Optional desktop wrapper (Tauri/Electron) for a one-click launch
+
+Known v1 limitations:
 
 - One pipeline job at a time (global lock)
 - Concat crossfade chain is simplified for 2+ clips
-- Retry infers failed stage from the last failed job
-
-</details>
+- Retry infers the failed stage from the last failed job
 
 ## Contributing
 
 ```bash
-npm test
-npm run lint
-npm run format
+npm test           # backend pytest + frontend tests + build
+npm run lint       # ESLint over the frontend
+npm run format     # Prettier over the frontend
+npm run doctor:react   # React 19 codebase health check
+npm run fallow:health  # dependency / dead-code audit summary
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for PR guidelines and [SECURITY.md](SECURITY.md) for vulnerability reports.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for PR guidelines and [`SECURITY.md`](SECURITY.md) for vulnerability reports.
 
 <details>
-<summary>Manual verification checklist</summary>
+<summary>Manual verification checklist (pre-release smoke test)</summary>
 
 ### Manual source mode
 
