@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 def test_overlay_preview_returns_png_bytes(client):
     with patch("app.api.routes.render_overlay_png") as render:
-        def fake_render(content, width, height, output_path, config=None):
+        def fake_render(content, width, height, output_path, config=None, render_mode="frame"):
             output_path.write_bytes(b"\x89PNG\r\n\x1a\n" + b"x" * 100)
 
         render.side_effect = fake_render

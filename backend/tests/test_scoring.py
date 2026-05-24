@@ -120,3 +120,98 @@ def test_similar_song_title_scores_lower():
         3,
     )
     assert correct.score > wrong.score
+
+
+def test_creditless_and_embedded_words_are_not_reject_flags():
+    result = score_candidate(
+        {
+            "id": "1",
+            "title": "Attack on Titan Opening 1 Creditless Guren no Yumiya",
+            "view_count": 40_000_000,
+            "duration": 90,
+        },
+        "Attack on Titan",
+        "Guren no Yumiya",
+        "Linked Horizon",
+        "opening",
+        1,
+    )
+
+    assert "edit" not in result.rejection_flags
+
+    alive = score_candidate(
+        {
+            "id": "2",
+            "title": "Anime Song Alive Official Audio",
+            "view_count": 1_000_000,
+            "duration": 90,
+        },
+        "Anime",
+        "Song",
+        "Artist",
+        "opening",
+        1,
+    )
+
+    assert "live" not in alive.rejection_flags
+
+
+def test_we_are_one_does_not_match_we_are_song_title():
+    from app.services.youtube_sourcer import _is_relevant_result, score_candidate
+
+    entry = {
+        "id": "1",
+        "title": "We Are One (Ole Ola) [The Official 2014 FIFA World Cup Song]",
+        "uploader": "Pitbull",
+        "channel_is_verified": True,
+        "view_count": 1_000_000_000,
+        "duration": 93,
+    }
+    result = score_candidate(entry, "One Piece", "We Are!", "Hiroshi Kitadani", "opening", 1)
+    assert not _is_relevant_result(result, "One Piece", "We Are!", "Hiroshi Kitadani", "opening", 1)
+
+
+def test_anime_opening_without_song_title_is_relevant():
+    from app.services.youtube_sourcer import _is_relevant_result, score_candidate
+
+    entry = {
+        "id": "1",
+        "title": "One Piece Opening 2",
+        "view_count": 21_000_000,
+        "duration": 90,
+    }
+    result = score_candidate(entry, "One Piece", "Believe", "Folder5", "opening", 2)
+    assert _is_relevant_result(result, "One Piece", "Believe", "Folder5", "opening", 2)
+    official = score_candidate(
+        {
+            "id": "1",
+            "title": "Linked Horizon - Guren no Yumiya Official Audio",
+            "uploader": "Linked Horizon - Topic",
+            "channel_is_verified": True,
+            "view_count": 50_000_000,
+            "duration": 310,
+        },
+        "Attack on Titan",
+        "Guren no Yumiya",
+        "Linked Horizon",
+        "opening",
+        1,
+    )
+    cover = score_candidate(
+        {
+            "id": "2",
+            "title": "Attack on Titan Opening 1 Guren no Yumiya Piano Cover",
+            "uploader": "Piano Covers",
+            "view_count": 100_000_000,
+            "duration": 90,
+        },
+        "Attack on Titan",
+        "Guren no Yumiya",
+        "Linked Horizon",
+        "opening",
+        1,
+    )
+
+    assert official.score > cover.score
+    assert "cover" in cover.rejection_flags
+    assert "piano" in cover.rejection_flags

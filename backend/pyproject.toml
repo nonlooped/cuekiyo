@@ -1,8 +1,8 @@
 [project]
-name = "video-pipeline-backend"
+name = "cuekiyo-backend"
 version = "1.0.0"
 requires-python = ">=3.11,<3.15"
-description = "Local anime MV pipeline API"
+description = "Cuekiyo — local anime compilation studio API"
 readme = "../README.md"
 license = { text = "MIT" }
 

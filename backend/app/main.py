@@ -7,7 +7,7 @@ from app.api.routes import router
 from app.database import init_db
 from app.jobs.runner import job_runner, recover_stale_pipeline_jobs
 
-app = FastAPI(title="Anime MV Pipeline", version="1.0.0")
+app = FastAPI(title="Cuekiyo", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -30,4 +30,4 @@ def on_startup() -> None:
 
 @app.get("/")
 def root():
-    return {"app": "anime-mv-pipeline", "docs": "/docs"}
+    return {"app": "cuekiyo", "docs": "/docs"}

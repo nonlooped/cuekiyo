@@ -66,6 +66,7 @@ def is_overlay_config_editable(status: ProjectStatus) -> bool:
     return status in (
         ProjectStatus.DRAFT,
         ProjectStatus.SONG_SELECTION,
+        ProjectStatus.AWAITING_OVERLAY_CONFIG,
         ProjectStatus.AWAITING_RENDER_ORDER,
     )
 
@@ -95,6 +96,8 @@ def next_auto_status_after_user_gate(status: ProjectStatus) -> ProjectStatus | N
         return ProjectStatus.AWAITING_CLIP_TRIM
     if status == ProjectStatus.AWAITING_CLIP_TRIM:
         return ProjectStatus.DOWNLOADING
+    if status == ProjectStatus.AWAITING_OVERLAY_CONFIG:
+        return ProjectStatus.OVERLAYING
     if status == ProjectStatus.AWAITING_RENDER_ORDER:
         return ProjectStatus.RENDERING
     return None

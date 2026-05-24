@@ -1,4 +1,5 @@
 import json
+import logging
 import math
 import re
 import subprocess
@@ -12,6 +13,8 @@ from pathlib import Path
 
 from app.config import settings
 from app.exceptions import CancelledJob
+
+logger = logging.getLogger(__name__)
 
 REJECT_KEYWORDS = [
     "remix",
@@ -40,8 +43,105 @@ SOFT_PENALTY_KEYWORDS = [
 
 SHORTS_MAX_DURATION = 60.0
 IDEAL_MIN_DURATION = 60.0
-IDEAL_MAX_DURATION = 120.0
-YOUTUBE_VIEW_SORT = "sp=CAM%253D"
+IDEAL_MAX_DURATION = 240.0
+SEARCH_RESULTS_PER_QUERY = 25
+SHORT_SONG_TITLE_MAX_TOKENS = 2
+
+SONG_TITLE_STOP_TOKENS = frozenset(
+    {
+        "opening",
+        "op",
+        "ending",
+        "ed",
+        "official",
+        "creditless",
+        "mv",
+        "video",
+        "music",
+        "anime",
+        "hd",
+        "4k",
+        "by",
+        "the",
+        "a",
+        "tv",
+        "size",
+        "full",
+        "feat",
+        "ft",
+        "ver",
+        "version",
+    }
+)
+
+HARD_REJECTION_FLAGS = {
+    "remix",
+    "cover",
+    "nightcore",
+    "slowed",
+    "reverb",
+    "live",
+    "piano",
+    "instrumental",
+    "reaction",
+    "amv",
+    "edit",
+    "1 hour",
+    "extended",
+    "loop",
+    "karaoke",
+    "shorts",
+    "#shorts",
+    "shorts_duration",
+}
+
+TRUSTED_UPLOADERS = (
+    "aniplex",
+    "anime pony canyon",
+    "animelab",
+    "crunchyroll",
+    "funimation",
+    "kadokawa",
+    "king records",
+    "lantis",
+    "netflix anime",
+    "noitamina",
+    "pony canyon",
+    "sony music",
+    "toho animation",
+    "warner bros. japan anime",
+)
+
+OFFICIAL_TERMS = (
+    "official",
+    "official audio",
+    "official music video",
+    "music video",
+    "mv",
+    "creditless",
+    "opening movie",
+    "ending movie",
+)
+
+COVER_PHRASES = (
+    "english cover",
+    "full english",
+    "english ver",
+    "english version",
+    "cover by",
+    "covered by",
+    "piano cover",
+)
+
+ANIME_CONTEXT_QUALIFIERS = (
+    "junior high",
+    "season 2",
+    "season 3",
+    "season 4",
+    "final season",
+    "movie",
+    "ova",
+)
 
 _youtube_semaphore: threading.Semaphore | None = None
 _youtube_semaphore_lock = threading.Lock()
@@ -80,12 +180,21 @@ class CandidateResult:
     raw_metadata: dict = field(default_factory=dict)
 
 
-def _candidate_sort_key(candidate: CandidateResult) -> tuple[float, int]:
-    return (candidate.score, candidate.view_count or 0)
-
-
 def _normalize(text: str) -> str:
     return re.sub(r"[^\w\s]", " ", text.lower()).strip()
+
+
+def _compact(text: str) -> str:
+    return " ".join(_normalize(text).split())
+
+
+def _contains_keyword(text: str, keyword: str) -> bool:
+    normalized_text = _compact(text)
+    normalized_keyword = _compact(keyword)
+    if not normalized_text or not normalized_keyword:
+        return False
+    pattern = r"(?<!\w)" + r"\s+".join(map(re.escape, normalized_keyword.split())) + r"(?!\w)"
+    return re.search(pattern, normalized_text) is not None
 
 
 def youtube_thumbnail_url(youtube_id: str | None) -> str | None:
@@ -110,6 +219,101 @@ def _song_tokens(text: str) -> set[str]:
     return {token for token in _normalize(text).split() if token}
 
 
+def _is_short_song_title(song_title: str) -> bool:
+    return len(_song_tokens(song_title)) <= SHORT_SONG_TITLE_MAX_TOKENS
+
+
+def _allow_bare_song_query(song: str) -> bool:
+    if not _is_short_song_title(song):
+        return True
+    return bool(re.search(r"[^\x00-\x7F]", song))
+
+
+def _contains_exact_song_phrase(title: str, song_title: str) -> bool:
+    song_parts = _compact(song_title).split()
+    if not song_parts:
+        return False
+    phrase = r"\s+".join(map(re.escape, song_parts))
+    pattern = rf"(?i)(?<!\w){phrase}(?:\s*[!?.…]+|[/_-]|(?:\s|/|$)(?![a-z]))"
+    return re.search(pattern, title) is not None
+
+
+def _anime_name_matches(text: str, anime_names: list[str]) -> bool:
+    for name in anime_names:
+        if _contains_keyword(text, name):
+            return True
+        name_tokens = _song_tokens(name)
+        if len(name_tokens) >= 2 and name_tokens.issubset(_song_tokens(text)):
+            return True
+    return False
+
+
+def _best_anime_name_match(text: str, anime_names: list[str]) -> float:
+    best = 0.0
+    for name in anime_names:
+        if _contains_keyword(text, name):
+            best = max(best, 1.0)
+            continue
+        overlap = _token_overlap(text, name)
+        name_tokens = _song_tokens(name)
+        if len(name_tokens) >= 2 and name_tokens.issubset(_song_tokens(text)):
+            best = max(best, 1.0)
+        else:
+            best = max(best, overlap)
+    return best
+
+
+def _song_title_matches(
+    title: str,
+    song_titles: list[str],
+    *,
+    blob: str | None = None,
+    anime_names: list[str] | None = None,
+) -> bool:
+    texts = [title]
+    if blob:
+        texts.append(blob)
+    for text in texts:
+        title_tokens = _song_tokens(text)
+        for song_title in song_titles:
+            song_tokens = _song_tokens(song_title)
+            if not song_tokens:
+                continue
+            overlap = song_tokens & title_tokens
+            coverage = len(overlap) / len(song_tokens)
+            if coverage < 0.67:
+                continue
+            if not _is_short_song_title(song_title):
+                return True
+            if _contains_exact_song_phrase(text, song_title):
+                return True
+            if anime_names and _anime_name_matches(text, anime_names):
+                return True
+            extra = title_tokens - song_tokens - SONG_TITLE_STOP_TOKENS
+            if not extra:
+                return True
+    return False
+
+
+def _best_song_title_match(
+    title: str,
+    song_titles: list[str],
+    *,
+    blob: str | None = None,
+    anime_names: list[str] | None = None,
+) -> float:
+    best = 0.0
+    for song_title in song_titles:
+        best = max(best, _song_token_coverage(title, song_title))
+        if blob:
+            best = max(best, _song_token_coverage(blob, song_title))
+    if _song_title_matches(title, song_titles, blob=blob, anime_names=anime_names):
+        return max(best, 0.67)
+    if _is_short_song_title(song_titles[0]) and best >= 0.67:
+        return min(best, 0.66)
+    return best
+
+
 def _song_token_coverage(title: str, song_title: str) -> float:
     song_tokens = _song_tokens(song_title)
     if not song_tokens:
@@ -118,12 +322,71 @@ def _song_token_coverage(title: str, song_title: str) -> float:
     return len(song_tokens & title_tokens) / len(song_tokens)
 
 
+def _text_options(primary: str, aliases: list[str] | None = None) -> list[str]:
+    seen: set[str] = set()
+    options: list[str] = []
+    for value in [primary, *(aliases or [])]:
+        display = " ".join(str(value).split())
+        key = display.casefold()
+        if not display or key in seen:
+            continue
+        seen.add(key)
+        options.append(display)
+    return options
+
+
+def _best_song_token_coverage(title: str, song_titles: list[str]) -> float:
+    return max((_song_token_coverage(title, song_title) for song_title in song_titles), default=0.0)
+
+
+def _best_token_overlap(text: str, options: list[str]) -> float:
+    return max((_token_overlap(text, option) for option in options), default=0.0)
+
+
 def _token_overlap(a: str, b: str) -> float:
     ta = set(_normalize(a).split())
     tb = set(_normalize(b).split())
     if not ta or not tb:
         return 0.0
-    return len(ta & tb) / len(ta | tb)
+    return len(ta & tb) / min(len(ta), len(tb))
+
+
+def _text_blob(entry: dict) -> str:
+    fields = (
+        entry.get("title"),
+        entry.get("description"),
+        entry.get("uploader"),
+        entry.get("channel"),
+        entry.get("uploader_id"),
+    )
+    return " ".join(str(field) for field in fields if field)
+
+
+def _has_official_signal(entry: dict) -> bool:
+    blob = _text_blob(entry)
+    return any(_contains_keyword(blob, term) for term in OFFICIAL_TERMS)
+
+
+def _has_trusted_uploader(entry: dict, artist: str | None) -> bool:
+    uploader = str(entry.get("uploader") or entry.get("channel") or "")
+    uploader_normalized = _compact(uploader)
+    if not uploader_normalized:
+        return False
+    if any(_contains_keyword(uploader_normalized, name) for name in TRUSTED_UPLOADERS):
+        return True
+    if uploader_normalized.endswith(" topic") or " vevo" in uploader_normalized:
+        return True
+    if artist and _token_overlap(uploader, artist) >= 1.0:
+        return True
+    return False
+
+
+def _is_trusted_source(entry: dict, artist: str | None) -> bool:
+    if _has_trusted_uploader(entry, artist):
+        return True
+    return bool(entry.get("channel_is_verified")) and (
+        _has_official_signal(entry) or (artist is not None and _token_overlap(_text_blob(entry), artist) >= 1.0)
+    )
 
 
 def build_search_queries(
@@ -132,32 +395,96 @@ def build_search_queries(
     song_type: str,
     song_number: int,
     artist: str | None,
+    *,
+    song_aliases: list[str] | None = None,
+    anime_aliases: list[str] | None = None,
 ) -> list[str]:
     op_ed = "OP" if song_type == "opening" else "ED"
     type_word = "opening" if song_type == "opening" else "ending"
+    anime_names = _text_options(anime_name, anime_aliases)
+    song_titles = _text_options(song_title, song_aliases)
+    primary_anime = anime_names[0]
+    primary_song = song_titles[0]
     base = [
-        f"{anime_name} {type_word} {song_number} {song_title}",
-        f"{anime_name} {op_ed} {song_number} {song_title}",
-        f"{anime_name} {song_title} {type_word}",
-        f"{anime_name} {op_ed}{song_number} {song_title}",
+        f"{primary_anime} {type_word} {song_number} {primary_song}",
+        f"{primary_anime} {op_ed} {song_number} {primary_song}",
+        f"{primary_anime} {primary_song} {type_word}",
+        f"{primary_anime} {op_ed}{song_number} {primary_song}",
+        f"{primary_anime} {type_word} {song_number} creditless",
     ]
+    for alias in song_titles[1:]:
+        base.append(f"{primary_anime} {type_word} {song_number} {alias}")
+        if artist:
+            base.append(f"{artist} {alias}")
+    for alternate_anime in anime_names[1:]:
+        base.extend(
+            [
+                f"{alternate_anime} {type_word} {song_number} {primary_song}",
+                f"{alternate_anime} {op_ed}{song_number} {primary_song}",
+            ]
+        )
+    for song in song_titles:
+        if _allow_bare_song_query(song):
+            base.append(song)
     if artist:
-        base.append(f"{anime_name} {type_word} {song_number} {artist}")
-        base.append(f"{anime_name} {song_title} {artist}")
+        base.append(f"{primary_anime} {type_word} {song_number} {artist}")
+        base.append(f"{primary_anime} {primary_song} {artist}")
+        base.append(f"{primary_song} {artist} official")
+        base.append(f"{artist} {primary_song}")
     return base
 
 
 def _extract_sequence_number(title: str, song_type: str) -> int | None:
     title_lower = title.lower()
     if song_type == "opening":
-        patterns = (r"opening\s*#?\s*(\d+)", r"\bop\s*#?\s*(\d+)")
+        patterns = (
+            r"opening\s*#?\s*(\d+)",
+            r"\bop\s*#?\s*(\d+)",
+            r"\b(\d+)(?:st|nd|rd|th)\s*(?:opening|op)\b",
+        )
     else:
-        patterns = (r"ending\s*#?\s*(\d+)", r"\bed\s*#?\s*(\d+)")
+        patterns = (
+            r"ending\s*#?\s*(\d+)",
+            r"\bed\s*#?\s*(\d+)",
+            r"\b(\d+)(?:st|nd|rd|th)\s*(?:ending|ed)\b",
+        )
     for pattern in patterns:
         match = re.search(pattern, title_lower)
         if match:
             return int(match.group(1))
+    ordinals = {
+        "first": 1,
+        "second": 2,
+        "third": 3,
+        "fourth": 4,
+        "fifth": 5,
+        "sixth": 6,
+        "seventh": 7,
+        "eighth": 8,
+        "ninth": 9,
+        "tenth": 10,
+    }
+    type_words = ("opening", "op") if song_type == "opening" else ("ending", "ed")
+    for word, number in ordinals.items():
+        if any(re.search(rf"\b{word}\s+{type_alias}\b", title_lower) for type_alias in type_words):
+            return number
     return None
+
+
+def _has_type_context(text: str, song_type: str) -> bool:
+    normalized = _compact(text)
+    if song_type == "opening":
+        return _contains_keyword(normalized, "opening") or _contains_keyword(normalized, "op")
+    return _contains_keyword(normalized, "ending") or _contains_keyword(normalized, "ed")
+
+
+def _has_conflicting_anime_context(title: str, anime_names: list[str]) -> bool:
+    normalized_title = _compact(title)
+    normalized_anime = _compact(" ".join(anime_names))
+    return any(
+        qualifier in normalized_title and qualifier not in normalized_anime
+        for qualifier in ANIME_CONTEXT_QUALIFIERS
+    )
 
 
 def _dedupe_queries(queries: list[str]) -> list[str]:
@@ -173,14 +500,101 @@ def _dedupe_queries(queries: list[str]) -> list[str]:
     return deduped
 
 
-def _is_relevant_candidate(
-    title: str,
+def _is_relevant_result(
+    result: CandidateResult,
+    anime_name: str,
     song_title: str,
     artist: str | None,
     song_type: str,
     song_number: int,
+    song_aliases: list[str] | None = None,
+    anime_aliases: list[str] | None = None,
 ) -> bool:
-    return _song_token_coverage(title, song_title) >= 1.0
+    entry = result.raw_metadata
+    title = result.title
+    blob = _text_blob(entry)
+    song_titles = _text_options(song_title, song_aliases)
+    anime_names = _text_options(anime_name, anime_aliases)
+    title_coverage = _best_song_title_match(title, song_titles, blob=blob, anime_names=anime_names)
+    anime_match = _anime_name_matches(blob, anime_names)
+    sequence_number = _extract_sequence_number(title, song_type)
+    if sequence_number is not None and sequence_number != song_number:
+        return False
+    if title_coverage >= 0.67 and anime_match:
+        return True
+    if _has_conflicting_anime_context(title, anime_names):
+        return False
+
+    sequence_match = sequence_number == song_number
+    artist_match = artist is not None and _token_overlap(blob, artist) >= 1.0
+    trusted = _is_trusted_source(entry, artist)
+    official = _has_official_signal(entry)
+    type_context = _has_type_context(blob, song_type)
+    title_song_match = _song_title_matches(title, song_titles, anime_names=anime_names)
+
+    if sequence_match and anime_match and type_context:
+        return True
+    if artist_match and title_song_match:
+        return True
+    if sequence_match and anime_match and artist_match and (trusted or official):
+        return True
+    if sequence_match and anime_match and trusted:
+        return True
+    if sequence_number is None and anime_match and artist_match and trusted:
+        return True
+    return False
+
+
+def _candidate_tier(
+    candidate: CandidateResult,
+    anime_name: str,
+    song_title: str,
+    artist: str | None,
+    song_type: str,
+    song_number: int,
+    song_aliases: list[str] | None = None,
+    anime_aliases: list[str] | None = None,
+) -> int:
+    if not _is_relevant_result(
+        candidate, anime_name, song_title, artist, song_type, song_number, song_aliases, anime_aliases
+    ):
+        return 99
+    hard_flags = set(candidate.rejection_flags) & HARD_REJECTION_FLAGS
+    if hard_flags:
+        return 4
+    entry = candidate.raw_metadata
+    blob = _text_blob(entry)
+    anime_names = _text_options(anime_name, anime_aliases)
+    anime_match = _anime_name_matches(blob, anime_names)
+    sequence_number = _extract_sequence_number(candidate.title, song_type)
+    sequence_match = sequence_number == song_number
+    type_context = _has_type_context(blob, song_type)
+    if (_is_trusted_source(entry, artist) or _has_official_signal(entry)) and anime_match:
+        return 0
+    if sequence_match and anime_match and type_context:
+        return 1
+    if _song_title_matches(
+        candidate.title,
+        _text_options(song_title, song_aliases),
+        blob=blob,
+        anime_names=anime_names,
+    ):
+        return 1
+    return 2
+
+
+def _candidate_rank_key(
+    candidate: CandidateResult,
+    anime_name: str,
+    song_title: str,
+    artist: str | None,
+    song_type: str,
+    song_number: int,
+    song_aliases: list[str] | None = None,
+    anime_aliases: list[str] | None = None,
+) -> tuple[int, float, int]:
+    tier = _candidate_tier(candidate, anime_name, song_title, artist, song_type, song_number, song_aliases, anime_aliases)
+    return (tier, -candidate.score, -(candidate.view_count or 0))
 
 
 def score_candidate(
@@ -190,56 +604,99 @@ def score_candidate(
     artist: str | None,
     song_type: str,
     song_number: int,
+    song_aliases: list[str] | None = None,
+    anime_aliases: list[str] | None = None,
 ) -> CandidateResult:
     title = entry.get("title") or ""
     title_lower = title.lower()
+    blob = _text_blob(entry)
     flags: list[str] = []
     penalty = 0.0
+    official = _has_official_signal(entry)
+    trusted = _is_trusted_source(entry, artist)
 
     for kw in REJECT_KEYWORDS:
-        if kw in title_lower:
+        if _contains_keyword(title_lower, kw) and kw not in flags:
             flags.append(kw)
-            penalty += 15.0
+            penalty += 35.0
+
+    if not (official or trusted):
+        for phrase in COVER_PHRASES:
+            if _contains_keyword(blob, phrase) and "cover" not in flags:
+                flags.append("cover")
+                penalty += 35.0
 
     for kw in SOFT_PENALTY_KEYWORDS:
-        if kw in title_lower:
-            penalty += 5.0
+        if _contains_keyword(title_lower, kw) and not (official or trusted):
+            penalty += 3.0
 
     duration = entry.get("duration")
     if duration is not None:
         if duration <= SHORTS_MAX_DURATION:
             flags.append("shorts_duration")
-            penalty += 20.0
+            penalty += 25.0
         elif IDEAL_MIN_DURATION <= duration <= IDEAL_MAX_DURATION:
             penalty -= 5.0
-        elif duration > 180:
-            penalty += 8.0
+        elif duration > 600:
+            penalty += 15.0
+        elif duration > 360 and not (official or trusted):
+            penalty += 5.0
 
     views = entry.get("view_count") or 0
-    view_score = math.log10(max(views, 1)) * 6.0
+    view_score = math.log10(max(views, 1)) * 9.0
 
-    title_coverage = _song_token_coverage(title, song_title)
-    title_sim = title_coverage * 30.0
+    song_titles = _text_options(song_title, song_aliases)
+    anime_names = _text_options(anime_name, anime_aliases)
+    blob_for_match = _text_blob(entry)
+    title_coverage = _best_song_title_match(title, song_titles, blob=blob_for_match, anime_names=anime_names)
+    title_sim = title_coverage * 35.0
     if title_coverage >= 1.0:
-        title_sim += 5.0
+        title_sim += 12.0
+    elif title_coverage >= 0.67:
+        title_sim += 4.0
     elif title_coverage > 0:
-        penalty += 20.0
+        penalty += 10.0
 
-    anime_sim = _token_overlap(title, anime_name) * 20.0
-    artist_sim = _token_overlap(title, artist or "") * 15.0 if artist else 0.0
-    type_bonus = 5.0 if ("opening" in title_lower and song_type == "opening") or (
-        "ending" in title_lower and song_type == "ending"
-    ) else 0.0
+    anime_sim = _best_anime_name_match(blob_for_match, anime_names) * 18.0
+    artist_sim = _token_overlap(blob, artist or "") * 18.0 if artist else 0.0
+    type_bonus = 5.0 if _has_type_context(blob, song_type) else 0.0
+    source_bonus = 0.0
+    if official:
+        source_bonus += 14.0
+    if trusted:
+        source_bonus += 18.0
+    if bool(entry.get("channel_is_verified")):
+        source_bonus += 8.0
 
     sequence_bonus = 0.0
+    contextual_bonus = 0.0
     sequence_number = _extract_sequence_number(title, song_type)
+    anime_match = _anime_name_matches(blob_for_match, anime_names)
     if sequence_number is not None:
         if sequence_number == song_number:
             sequence_bonus = 30.0
+            if anime_match and _has_type_context(blob_for_match, song_type) and title_coverage < 0.67:
+                contextual_bonus = 42.0
+                if official:
+                    contextual_bonus += 8.0
+            elif trusted and anime_match and title_coverage < 0.67:
+                contextual_bonus = 42.0
+                if official:
+                    contextual_bonus += 8.0
         else:
-            penalty += 25.0
+            penalty += 35.0
 
-    score = title_sim + anime_sim + artist_sim + view_score + type_bonus + sequence_bonus - penalty
+    score = (
+        title_sim
+        + anime_sim
+        + artist_sim
+        + view_score
+        + type_bonus
+        + source_bonus
+        + sequence_bonus
+        + contextual_bonus
+        - penalty
+    )
 
     return CandidateResult(
         youtube_id=entry.get("id") or "",
@@ -276,10 +733,7 @@ def _run_subprocess(
 
 
 def yt_dlp_search(query: str, max_results: int = 10) -> list[dict]:
-    search_url = (
-        "https://www.youtube.com/results"
-        f"?search_query={urllib.parse.quote_plus(query)}&{YOUTUBE_VIEW_SORT}"
-    )
+    search_url = f"https://www.youtube.com/results?search_query={urllib.parse.quote_plus(query)}"
     cmd = [
         "yt-dlp",
         search_url,
@@ -292,11 +746,13 @@ def yt_dlp_search(query: str, max_results: int = 10) -> list[dict]:
     with youtube_slot():
         proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if proc.returncode != 0:
+        logger.warning("yt-dlp search failed for query=%r: %s", query, proc.stderr or proc.stdout)
         return []
     try:
         data = json.loads(proc.stdout)
         return data.get("entries") or []
     except json.JSONDecodeError:
+        logger.warning("yt-dlp search returned invalid JSON for query=%r", query)
         return []
 
 
@@ -307,26 +763,47 @@ def source_candidates_for_song(
     song_number: int,
     artist: str | None,
     top_n: int = 3,
+    song_aliases: list[str] | None = None,
+    anime_aliases: list[str] | None = None,
 ) -> list[CandidateResult]:
     seen_ids: set[str] = set()
     scored: list[CandidateResult] = []
 
-    for query in _dedupe_queries(build_search_queries(anime_name, song_title, song_type, song_number, artist)):
-        for entry in yt_dlp_search(query, max_results=10):
+    if song_aliases or anime_aliases:
+        queries = build_search_queries(
+            anime_name,
+            song_title,
+            song_type,
+            song_number,
+            artist,
+            song_aliases=song_aliases,
+            anime_aliases=anime_aliases,
+        )
+    else:
+        queries = build_search_queries(anime_name, song_title, song_type, song_number, artist)
+    for query in _dedupe_queries(queries):
+        for entry in yt_dlp_search(query, max_results=SEARCH_RESULTS_PER_QUERY):
             vid = entry.get("id")
             if not vid or vid in seen_ids:
                 continue
             seen_ids.add(vid)
-            result = score_candidate(entry, anime_name, song_title, artist, song_type, song_number)
-            if result.youtube_id and _is_relevant_candidate(
-                result.title, song_title, artist, song_type, song_number
+            result = score_candidate(
+                entry, anime_name, song_title, artist, song_type, song_number, song_aliases, anime_aliases
+            )
+            if result.youtube_id and _is_relevant_result(
+                result, anime_name, song_title, artist, song_type, song_number, song_aliases, anime_aliases
             ):
                 scored.append(result)
 
-    scored.sort(key=_candidate_sort_key, reverse=True)
-    clean = [c for c in scored if not c.rejection_flags]
-    pool = clean if len(clean) >= top_n else scored
-    pool.sort(key=_candidate_sort_key, reverse=True)
+    scored.sort(
+        key=lambda c: _candidate_rank_key(c, anime_name, song_title, artist, song_type, song_number, song_aliases, anime_aliases)
+    )
+    acceptable = [
+        c
+        for c in scored
+        if _candidate_tier(c, anime_name, song_title, artist, song_type, song_number, song_aliases, anime_aliases) < 4
+    ]
+    pool = acceptable if acceptable else scored
     return pool[:top_n]
 
 

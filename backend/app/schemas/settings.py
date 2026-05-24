@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel
 
 
 class AppSettingsOut(BaseModel):
@@ -9,10 +9,3 @@ class AppSettingsOut(BaseModel):
 
 class AppSettingsUpdate(BaseModel):
     anime_metadata_provider: Literal["jikan", "anilist"]
-
-    @field_validator("anime_metadata_provider")
-    @classmethod
-    def validate_provider(cls, value: str) -> str:
-        if value not in ("jikan", "anilist"):
-            raise ValueError("anime_metadata_provider must be 'jikan' or 'anilist'")
-        return value

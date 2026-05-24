@@ -100,4 +100,4 @@ def test_cut_advances_when_clean_clips_exist(db_session, tmp_path, monkeypatch):
 
     run_ffmpeg.assert_not_called()
     db_session.refresh(project)
-    assert project.status == ProjectStatus.OVERLAYING.value
+    assert project.status == ProjectStatus.AWAITING_OVERLAY_CONFIG.value

@@ -38,10 +38,6 @@ def song_download_path(project_id: str, song_id: str, ext: str = "mp4") -> Path:
     return resolve_project_path(project_id, "downloads", f"{song_id}.{ext}")
 
 
-def song_normalized_path(project_id: str, song_id: str) -> Path:
-    return resolve_project_path(project_id, "normalized", f"{song_id}.mp4")
-
-
 def song_clean_clip_path(project_id: str, song_id: str) -> Path:
     return resolve_project_path(project_id, "clips", f"{song_id}_clean.mp4")
 

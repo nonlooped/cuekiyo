@@ -33,25 +33,6 @@ def _env_str(key: str) -> str | None:
     return value.strip()
 
 
-def _env_path(key: str) -> Path | None:
-    raw = _env_str(key)
-    return Path(raw).expanduser() if raw else None
-
-
-def _env_int(key: str) -> int | None:
-    raw = _env_str(key)
-    if raw is None:
-        return None
-    return int(raw)
-
-
-def _env_float(key: str) -> float | None:
-    raw = _env_str(key)
-    if raw is None:
-        return None
-    return float(raw)
-
-
 class Settings(BaseModel):
     data_dir: Path = _DEFAULT_DATA_DIR
     db_path: Path | None = None
@@ -60,7 +41,6 @@ class Settings(BaseModel):
     jikan_rate_limit_seconds: float = 0.35
     anilist_graphql_url: str = "https://graphql.anilist.co"
     anilist_rate_limit_seconds: float = 0.7
-    transition_seconds: float = 0.5
     fade_seconds: float = 0.5
     ffmpeg_crf: int = 18
     ffmpeg_cq: int = 19
@@ -110,7 +90,6 @@ def _apply_env_overrides(data: dict) -> dict:
         ("PIPELINE_JIKAN_RATE_LIMIT_SECONDS", "jikan_rate_limit_seconds", float),
         ("PIPELINE_ANILIST_GRAPHQL_URL", "anilist_graphql_url", str),
         ("PIPELINE_ANILIST_RATE_LIMIT_SECONDS", "anilist_rate_limit_seconds", float),
-        ("PIPELINE_TRANSITION_SECONDS", "transition_seconds", float),
         ("PIPELINE_FADE_SECONDS", "fade_seconds", float),
         ("PIPELINE_FFMPEG_CRF", "ffmpeg_crf", int),
         ("PIPELINE_FFMPEG_CQ", "ffmpeg_cq", int),

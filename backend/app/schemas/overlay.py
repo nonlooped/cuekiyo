@@ -11,6 +11,11 @@ class OverlayConfig(BaseModel):
     show_anime_name: bool = True
     show_song_line: bool = True
     show_meta_line: bool = True
+    accent_color: str = "#a3e635"
+    title_color: str = "#ffffff"
+    subtitle_color: str = "rgba(255,255,255,0.88)"
+    meta_color: str = "rgba(255,255,255,0.65)"
+    font_scale: Literal["compact", "default", "large"] = "default"
 
 
 class OverlayPreviewRequest(BaseModel):

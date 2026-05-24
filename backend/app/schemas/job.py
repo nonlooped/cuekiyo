@@ -30,12 +30,3 @@ class JobLogOut(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
-
-
-class ProgressEvent(BaseModel):
-    type: str = "job.progress"
-    projectId: str
-    jobId: str
-    stage: str
-    progress: float
-    message: str

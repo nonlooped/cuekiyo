@@ -9,6 +9,9 @@ def test_overlay_config_defaults_match_current_behavior():
     assert cfg.show_anime_name is True
     assert cfg.show_song_line is True
     assert cfg.show_meta_line is True
+    assert cfg.accent_color == "#a3e635"
+    assert cfg.title_color == "#ffffff"
+    assert cfg.font_scale == "default"
 
 
 def test_overlay_config_roundtrip():

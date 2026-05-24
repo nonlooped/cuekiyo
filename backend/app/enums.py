@@ -11,6 +11,7 @@ class ProjectStatus(str, enum.Enum):
     DOWNLOADING = "DOWNLOADING"
     PROBING_NORMALIZING = "PROBING_NORMALIZING"
     CUTTING = "CUTTING"
+    AWAITING_OVERLAY_CONFIG = "AWAITING_OVERLAY_CONFIG"
     OVERLAYING = "OVERLAYING"
     AWAITING_RENDER_ORDER = "AWAITING_RENDER_ORDER"
     RENDERING = "RENDERING"
@@ -90,7 +91,11 @@ PROJECT_TRANSITIONS: dict[ProjectStatus, set[ProjectStatus]] = {
     ProjectStatus.AWAITING_CLIP_TRIM: {ProjectStatus.DOWNLOADING, ProjectStatus.FAILED},
     ProjectStatus.DOWNLOADING: {ProjectStatus.PROBING_NORMALIZING, ProjectStatus.FAILED},
     ProjectStatus.PROBING_NORMALIZING: {ProjectStatus.CUTTING, ProjectStatus.FAILED},
-    ProjectStatus.CUTTING: {ProjectStatus.OVERLAYING, ProjectStatus.FAILED},
+    ProjectStatus.CUTTING: {ProjectStatus.AWAITING_OVERLAY_CONFIG, ProjectStatus.FAILED},
+    ProjectStatus.AWAITING_OVERLAY_CONFIG: {
+        ProjectStatus.OVERLAYING,
+        ProjectStatus.FAILED,
+    },
     ProjectStatus.OVERLAYING: {ProjectStatus.AWAITING_RENDER_ORDER, ProjectStatus.FAILED},
     ProjectStatus.AWAITING_RENDER_ORDER: {
         ProjectStatus.RENDERING,
@@ -117,6 +122,7 @@ USER_GATED_STATUSES = {
     ProjectStatus.SONG_SELECTION,
     ProjectStatus.AWAITING_CANDIDATES,
     ProjectStatus.AWAITING_CLIP_TRIM,
+    ProjectStatus.AWAITING_OVERLAY_CONFIG,
     ProjectStatus.AWAITING_RENDER_ORDER,
 }
 

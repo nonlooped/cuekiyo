@@ -556,6 +556,8 @@ class JobRunner:
                 terminal = {
                     ProjectStatus.SONG_SELECTION,
                     ProjectStatus.AWAITING_CANDIDATES,
+                    ProjectStatus.AWAITING_CLIP_TRIM,
+                    ProjectStatus.AWAITING_OVERLAY_CONFIG,
                     ProjectStatus.AWAITING_RENDER_ORDER,
                     ProjectStatus.COMPLETED,
                     ProjectStatus.FAILED,
@@ -1001,7 +1003,7 @@ class JobRunner:
                 item_complete=True,
             )
         db.commit()
-        _set_project_status(db, project.id, ProjectStatus.OVERLAYING)
+        _set_project_status(db, project.id, ProjectStatus.AWAITING_OVERLAY_CONFIG)
 
     def _run_overlay(self, db: Session, job: Job, project: Project) -> None:
         from app.enums import Encoder

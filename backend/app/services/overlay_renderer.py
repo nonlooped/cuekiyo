@@ -4,6 +4,7 @@ import subprocess
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 from app.services.paths import overlay_png_path, resolve_project_path
 from app.schemas.overlay import OverlayConfig
@@ -121,6 +122,8 @@ def render_overlay_png(
     height: int,
     output_path: Path,
     config: OverlayConfig | None = None,
+    *,
+    render_mode: Literal["strip", "frame"] = "strip",
 ) -> None:
     """Render lower-third PNG via the frontend Satori CLI."""
     cfg = config or OverlayConfig()
@@ -146,6 +149,12 @@ def render_overlay_png(
         "showAnimeName": cfg.show_anime_name,
         "showSongLine": cfg.show_song_line,
         "showMetaLine": cfg.show_meta_line,
+        "accentColor": cfg.accent_color,
+        "titleColor": cfg.title_color,
+        "subtitleColor": cfg.subtitle_color,
+        "metaColor": cfg.meta_color,
+        "fontScale": cfg.font_scale,
+        "renderMode": render_mode,
     }
 
     output_path.parent.mkdir(parents=True, exist_ok=True)

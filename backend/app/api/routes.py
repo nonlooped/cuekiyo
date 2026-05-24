@@ -595,6 +595,22 @@ def confirm_clip_trim(project_id: str, db: Session = Depends(get_db)):
     return {"jobId": job.id}
 
 
+@router.post("/projects/{project_id}/overlay-config/confirm")
+def confirm_overlay_config(project_id: str, db: Session = Depends(get_db)):
+    project = db.get(Project, project_id)
+    if not project or ProjectStatus(project.status) != ProjectStatus.AWAITING_OVERLAY_CONFIG:
+        raise HTTPException(400, "Not awaiting overlay configuration")
+    songs = db.query(Song).filter(Song.project_id == project_id).all()
+    if not songs:
+        raise HTTPException(400, "Project has no songs")
+    validate_transition(ProjectStatus.AWAITING_OVERLAY_CONFIG, ProjectStatus.OVERLAYING)
+    project.status = ProjectStatus.OVERLAYING.value
+    project.error_message = None
+    db.commit()
+    job = job_runner.start_job(project_id, JobType.OVERLAY)
+    return {"jobId": job.id}
+
+
 @router.post("/projects/{project_id}/stage/start")
 def start_next_stage(project_id: str, db: Session = Depends(get_db)):
     project = db.get(Project, project_id)
@@ -832,7 +848,7 @@ def preview_overlay(body: OverlayPreviewRequest):
     )
     with tempfile.TemporaryDirectory() as tmp:
         out = Path(tmp) / "preview.png"
-        render_overlay_png(content, body.width, body.height, out, config=body.config)
+        render_overlay_png(content, body.width, body.height, out, config=body.config, render_mode="frame")
         return Response(content=out.read_bytes(), media_type="image/png")
 
 

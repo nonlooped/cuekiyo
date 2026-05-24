@@ -1,22 +1,16 @@
+from pathlib import Path
+
 import pytest
 
 from app.services.ffmpeg_engine import (
     _NVENC_PROBE_SIZE,
     _strip_hw_decode,
-    build_normalize_cmd,
+    build_prepare_clip_cmd,
     run_ffmpeg,
 )
 
 
-def test_build_normalize_uses_array():
-    cmd = build_normalize_cmd("/in.mp4", "/out.mp4", 1920, 1080, 24, "libx264")
-    assert cmd[0] == "ffmpeg"
-    assert "-i" in cmd
-    assert ";" not in " ".join(cmd)
-    assert "-crf" in cmd
-
-
-def test_build_normalize_adds_cuda_decode_for_nvenc(monkeypatch):
+def test_prepare_clip_adds_cuda_decode_for_nvenc(monkeypatch):
     monkeypatch.setattr(
         "app.services.ffmpeg_engine.input_video_codec",
         lambda _path: "av1",
@@ -25,9 +19,29 @@ def test_build_normalize_adds_cuda_decode_for_nvenc(monkeypatch):
         "app.services.ffmpeg_engine.cuvid_decoder_for",
         lambda codec: "av1_cuvid" if codec == "av1" else None,
     )
-    cmd = build_normalize_cmd("/in.mp4", "/out.mp4", 1920, 1080, 24, "h264_nvenc")
-    assert cmd[:6] == ["ffmpeg", "-y", "-hwaccel", "cuda", "-c:v", "av1_cuvid"]
-    assert cmd[6:8] == ["-i", "/in.mp4"]
+    cmd = build_prepare_clip_cmd(
+        Path("/in.mp4"),
+        Path("/out.mp4"),
+        start=0.0,
+        duration=10.0,
+        width=1920,
+        height=1080,
+        fps=24,
+        audio_normalize=False,
+        video_encoder="h264_nvenc",
+    )
+    assert cmd[:8] == [
+        "ffmpeg",
+        "-y",
+        "-ss",
+        "0.0",
+        "-hwaccel",
+        "cuda",
+        "-c:v",
+        "av1_cuvid",
+    ]
+    assert "-i" in cmd
+    assert "/in.mp4" in cmd
     assert "-cq" in cmd
 
 

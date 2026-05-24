@@ -1,5 +1,4 @@
 import asyncio
-import json
 import threading
 import time
 from typing import Any
@@ -61,14 +60,3 @@ def extract_themes(anime_data: dict[str, Any]) -> tuple[list[str], list[str]]:
     openings = themes.get("openings") or []
     endings = themes.get("endings") or []
     return list(openings), list(endings)
-
-
-def anime_to_cache_fields(anime_data: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "mal_id": anime_data.get("mal_id"),
-        "title": anime_data.get("title", ""),
-        "title_english": anime_data.get("title_english"),
-        "image_url": (anime_data.get("images") or {}).get("jpg", {}).get("image_url"),
-        "year": anime_data.get("year"),
-        "raw_json": json.dumps(anime_data),
-    }
