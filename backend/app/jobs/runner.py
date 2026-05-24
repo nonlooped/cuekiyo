@@ -1211,7 +1211,8 @@ class JobRunner:
         step = "Rendering final video"
         self._log_step(db, job, step)
         self._report_progress(db, job, project, item_index=len(songs), item_total=total, message=step)
-        cmd = ffmpeg_engine.build_concat_render_cmd(clips, out, settings.fade_seconds, enc)
+        fade = project.fade_seconds if project.fade_seconds is not None else settings.fade_seconds
+        cmd = ffmpeg_engine.build_concat_render_cmd(clips, out, fade, enc)
         log_fn = self._ffmpeg_log(db, job)
         job_id = job.id
         with _heartbeat_while_running(db):

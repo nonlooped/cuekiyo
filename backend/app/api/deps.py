@@ -36,6 +36,7 @@ def project_to_out(
         "audio_normalize": project.audio_normalize,
         "source_mode": project.source_mode,
         "overlay_config": json.loads(project.overlay_config_json or "{}"),
+        "fade_seconds": project.fade_seconds,
         "output_path": project.output_path,
         "error_message": project.error_message,
         "created_at": project.created_at,

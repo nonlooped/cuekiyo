@@ -90,6 +90,7 @@ def create_project(body: ProjectCreate, db: Session = Depends(get_db)):
         audio_normalize=body.audio_normalize,
         source_mode=body.source_mode.value,
         overlay_config_json=json.dumps(overlay_config),
+        fade_seconds=body.fade_seconds,
         status=ProjectStatus.DRAFT.value,
     )
     db.add(project)
