@@ -7,17 +7,24 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.enums import JobType, ProjectStatus, SongStatus
+from app.enums import JobType, ProjectStatus, SongStatus, SourceMode
 from app.jobs.runner import job_runner, release_lock_for_project
 from app.jobs.websocket_manager import ws_manager
 from app.models import AnimeCache, Job, JobLog, Project, ProjectAnime, Song, SongCandidate, ThemeSong
 from app.schemas.anime import AnimeSearchResult, ThemeSongOut
 from app.schemas.job import JobLogOut, JobOut
-from app.schemas.project import ProjectCreate, ProjectOut, ProjectUpdate, RenderOrderUpdate
+from app.schemas.project import ProjectCreate, ProjectUpdate, RenderOrderUpdate
 from app.schemas.settings import AppSettingsOut, AppSettingsUpdate
 from app.services import anime_metadata, ffmpeg_engine, overlay_renderer
 from app.services.paths import project_dir
-from app.schemas.song import CandidateOut, CandidateSelectRequest, SongOut, SongSelectRequest
+from app.services.youtube_url import fetch_video_metadata, metadata_to_candidate_result
+from app.schemas.song import (
+    CandidateOut,
+    CandidateSelectRequest,
+    ManualCandidateRequest,
+    SongOut,
+    SongSelectRequest,
+)
 from app.config import settings, save_settings
 from app.exceptions import PrerequisiteError
 from app.state_machine import (
@@ -25,7 +32,6 @@ from app.state_machine import (
     is_editable,
     job_type_for_status,
     next_auto_status_after_user_gate,
-    retry_target_status,
     validate_transition,
     validate_user_gate_prerequisites,
 )
@@ -341,10 +347,80 @@ def list_candidates(project_id: str, song_id: str, db: Session = Depends(get_db)
     cands = (
         db.query(SongCandidate)
         .filter(SongCandidate.song_id == song_id)
-        .order_by(SongCandidate.view_count.desc().nullslast(), SongCandidate.rank)
+        .order_by(SongCandidate.rank, SongCandidate.view_count.desc().nullslast())
         .all()
     )
     return [CandidateOut.model_validate(c) for c in cands]
+
+
+@router.post("/projects/{project_id}/songs/{song_id}/candidates/manual")
+def submit_manual_candidate(
+    project_id: str,
+    song_id: str,
+    body: ManualCandidateRequest,
+    db: Session = Depends(get_db),
+):
+    project = db.get(Project, project_id)
+    if not project:
+        raise HTTPException(404, "Project not found")
+    if SourceMode(project.source_mode) != SourceMode.MANUAL:
+        raise HTTPException(400, "Project is not in manual source mode")
+    if ProjectStatus(project.status) != ProjectStatus.AWAITING_CANDIDATES:
+        raise HTTPException(400, "Manual sources can only be set while reviewing clips")
+    song = db.get(Song, song_id)
+    if not song or song.project_id != project_id:
+        raise HTTPException(404, "Song not found")
+
+    try:
+        entry = fetch_video_metadata(body.url)
+        result = metadata_to_candidate_result(entry)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+    if result.duration is not None and result.duration < project.clip_time:
+        raise HTTPException(
+            400,
+            f"Video is {result.duration:.0f}s but clip length is {project.clip_time:.0f}s — pick a longer upload or reduce clip length",
+        )
+
+    db.query(SongCandidate).filter(SongCandidate.song_id == song_id).delete()
+    cand = SongCandidate(
+        song_id=song_id,
+        youtube_id=result.youtube_id,
+        url=result.url,
+        title=result.title,
+        uploader_name=result.uploader_name,
+        view_count=result.view_count,
+        duration=result.duration,
+        thumbnail_url=result.thumbnail_url,
+        score=result.score,
+        rank=1,
+        is_selected=True,
+        is_manual=True,
+        rejection_flags=json.dumps(result.rejection_flags),
+        raw_metadata_json=json.dumps(result.raw_metadata, default=str),
+    )
+    db.add(cand)
+    db.flush()
+    song.selected_candidate_id = cand.id
+    song.status = SongStatus.SELECTED.value
+    db.commit()
+    db.refresh(cand)
+
+    songs = db.query(Song).filter(Song.project_id == project_id).all()
+    if all(s.selected_candidate_id for s in songs):
+        validate_transition(ProjectStatus.AWAITING_CANDIDATES, ProjectStatus.DOWNLOADING)
+        project.status = ProjectStatus.DOWNLOADING.value
+        db.commit()
+        job = job_runner.start_job(project_id, JobType.DOWNLOAD)
+        return {
+            "ok": True,
+            "candidate": CandidateOut.model_validate(cand).model_dump(),
+            "jobId": job.id,
+        }
+    return {"ok": True, "candidate": CandidateOut.model_validate(cand).model_dump()}
 
 
 @router.post("/projects/{project_id}/songs/{song_id}/candidates/select")

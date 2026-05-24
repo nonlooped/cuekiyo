@@ -22,6 +22,10 @@ class SongSelectRequest(BaseModel):
     confirm_fewer: bool = False
 
 
+class ManualCandidateRequest(BaseModel):
+    url: str = Field(min_length=1, max_length=512)
+
+
 class CandidateOut(BaseModel):
     id: str
     song_id: str
@@ -35,6 +39,7 @@ class CandidateOut(BaseModel):
     score: float
     rank: int
     is_selected: bool
+    is_manual: bool
     rejection_flags: list[str]
 
     @field_validator("rejection_flags", mode="before")

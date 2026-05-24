@@ -16,6 +16,7 @@ def test_candidate_out_parses_rejection_flags_json_string():
             "score": 1.0,
             "rank": 1,
             "is_selected": False,
+            "is_manual": False,
             "rejection_flags": '["remix", "cover"]',
         }
     )
@@ -37,6 +38,7 @@ def test_candidate_out_empty_rejection_flags():
             "score": 1.0,
             "rank": 1,
             "is_selected": False,
+            "is_manual": False,
             "rejection_flags": "[]",
         }
     )
