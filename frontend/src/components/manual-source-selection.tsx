@@ -3,7 +3,6 @@ import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
 	LinkSquare01Icon,
-	Tick02Icon,
 	YoutubeIcon,
 } from "@hugeicons/core-free-icons";
 import { api } from "@/api";
@@ -11,7 +10,7 @@ import { errorToMessage } from "@/lib/errors";
 import { nextUnselectedSongId } from "@/lib/candidate-selection";
 import { allManualSourcesSet } from "@/lib/manual-source-selection";
 import { isValidYoutubeUrl } from "@/lib/youtube-url";
-import { candidateThumbnail } from "@/lib/youtube";
+import { YoutubePreview } from "@/components/youtube-preview";
 import type { Candidate, Song } from "@/types";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { Badge } from "@/components/ui/badge";
@@ -182,7 +181,6 @@ export function ManualSourceSelection({
 					const selected = candidates[song.id]?.find(
 						(c) => c.id === song.selected_candidate_id,
 					);
-					const thumb = selected ? candidateThumbnail(selected) : null;
 
 					return (
 						<TabsContent
@@ -196,50 +194,30 @@ export function ManualSourceSelection({
 							</div>
 
 							{selected ? (
-								<div className="flex max-w-2xl flex-col overflow-hidden rounded-xl border border-primary/40 shadow-[0_0_16px_oklch(from_var(--primary)_l_c_h_/0.08)]">
-									<div className="relative aspect-video w-full shrink-0 bg-muted">
-										{thumb ? (
-											<img
-												src={thumb}
-												alt=""
-												className="size-full object-cover"
-												loading="lazy"
-											/>
-										) : (
-											<div className="flex size-full items-center justify-center text-xs text-muted-foreground">
-												No preview
-											</div>
-										)}
-										<span
-											aria-label="Selected"
-											className="absolute top-2 right-2 flex size-6 items-center justify-center rounded-full bg-black/60 backdrop-blur-sm shadow-[0_0_8px_oklch(from_var(--primary)_l_c_h_/0.25)]"
-										>
-											<HugeiconsIcon
-												icon={Tick02Icon}
-												strokeWidth={2.5}
-												className="size-3.5 text-primary"
-											/>
-										</span>
-									</div>
-									<div className="flex flex-col gap-2 p-4">
+								<div className="flex max-w-2xl flex-col gap-4">
+									<YoutubePreview
+										youtubeId={selected.youtube_id}
+										title={selected.title}
+									/>
+									<div className="rounded-xl border border-primary/40 bg-card/40 p-4 shadow-[0_0_16px_oklch(from_var(--primary)_l_c_h_/0.08)]">
 										<div className="flex flex-wrap items-start gap-2">
 											<span className="line-clamp-2 flex-1 text-sm font-medium leading-5">
 												{selected.title}
 											</span>
-											{selected.is_manual && (
+											{selected.is_manual ? (
 												<Badge variant="secondary" className="shrink-0">
 													Your link
 												</Badge>
-											)}
+											) : null}
 										</div>
-										<p className="text-xs text-muted-foreground tabular-nums">
+										<p className="mt-2 text-xs text-muted-foreground tabular-nums">
 											{formatDuration(selected.duration)}
 										</p>
 										<a
 											href={selected.url}
 											target="_blank"
 											rel="noreferrer"
-											className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+											className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
 										>
 											<HugeiconsIcon
 												icon={LinkSquare01Icon}

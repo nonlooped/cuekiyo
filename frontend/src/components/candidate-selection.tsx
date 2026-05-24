@@ -6,6 +6,7 @@ import { api } from "@/api"
 import { errorToMessage } from "@/lib/errors"
 import { nextUnselectedSongId } from "@/lib/candidate-selection"
 import { candidateThumbnail } from "@/lib/youtube"
+import { YoutubePreview } from "@/components/youtube-preview"
 import type { Candidate, Song } from "@/types"
 import { LoadingSpinner } from "@/components/loading-spinner"
 import { Badge } from "@/components/ui/badge"
@@ -157,6 +158,10 @@ export function CandidateSelection({
                   (c.uploader_name ?? "").toLowerCase().includes(q)
               )
             : list
+          const activeCandidate =
+            list.find((c) => c.id === song.selected_candidate_id) ??
+            filtered[0] ??
+            null
 
           return (
             <TabsContent
@@ -182,6 +187,13 @@ export function CandidateSelection({
                   />
                 </InputGroup>
               </div>
+
+              {activeCandidate ? (
+                <YoutubePreview
+                  youtubeId={activeCandidate.youtube_id}
+                  title={activeCandidate.title}
+                />
+              ) : null}
 
               <ScrollArea className="w-full">
                 <ul className="grid items-stretch gap-3 sm:grid-cols-2 xl:grid-cols-3">
