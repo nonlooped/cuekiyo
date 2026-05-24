@@ -486,9 +486,9 @@ def submit_manual_candidate(
         entry = fetch_video_metadata(body.url)
         result = metadata_to_candidate_result(entry)
     except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
+        raise HTTPException(400, "Invalid YouTube URL") from exc
     except RuntimeError as exc:
-        raise HTTPException(422, str(exc)) from exc
+        raise HTTPException(422, "Could not fetch video metadata from YouTube") from exc
 
     if result.duration is not None and result.duration < project.clip_time:
         raise HTTPException(

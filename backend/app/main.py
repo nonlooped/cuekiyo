@@ -42,6 +42,20 @@ def root():
     return {"app": "cuekiyo", "docs": "/docs"}
 
 
+def _safe_frontend_path(full_path: str) -> Path | None:
+    if not full_path or full_path.startswith(("api", "/", "\\")):
+        return None
+    relative = Path(full_path)
+    if relative.is_absolute() or ".." in relative.parts:
+        return None
+    candidate = (_FRONTEND_DIST / relative).resolve()
+    try:
+        candidate.relative_to(_FRONTEND_DIST.resolve())
+    except ValueError:
+        return None
+    return candidate
+
+
 if settings.serve_frontend and _FRONTEND_DIST.is_dir():
     assets_dir = _FRONTEND_DIST / "assets"
     if assets_dir.is_dir():
@@ -51,8 +65,8 @@ if settings.serve_frontend and _FRONTEND_DIST.is_dir():
     async def serve_frontend(full_path: str):
         if full_path.startswith("api"):
             raise HTTPException(status_code=404, detail="Not found")
-        candidate = _FRONTEND_DIST / full_path
-        if candidate.is_file():
+        candidate = _safe_frontend_path(full_path)
+        if candidate is not None and candidate.is_file():
             return FileResponse(candidate)
         if (_FRONTEND_DIST / "index.html").is_file():
             return FileResponse(_FRONTEND_DIST / "index.html")

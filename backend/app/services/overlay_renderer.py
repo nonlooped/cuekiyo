@@ -243,8 +243,8 @@ def check_overlay_support() -> tuple[bool, str]:
 
     try:
         fonts = f"{resolve_font()}, {resolve_font_regular()}"
-    except RuntimeError as exc:
-        return False, str(exc)
+    except RuntimeError:
+        return False, "No overlay font found. Install dejavu-fontconfig or liberation-fonts."
 
     return True, f"node + satori overlay ({fonts}, Noto Sans JP CJK)"
 
