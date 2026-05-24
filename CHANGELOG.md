@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.0.1] — 2026-05-24
+
+### Security
+
+- Frontend static file serving validates each path segment before resolution, blocking directory traversal.
+- YouTube metadata fetch validates video IDs and passes the watch URL to yt-dlp after a `--` separator.
+
 ## [1.0.0] — 2026-05-24
 
 The first public release of Cuekiyo: a local-first studio for building anime opening and ending compilations.
@@ -83,5 +90,6 @@ The first public release of Cuekiyo: a local-first studio for building anime ope
 - Linear `xfade` chain for multi-clip crossfade (correct, not maximally efficient).
 - Retry infers the failed stage from the last failed job rather than reading a per-stage durable cursor.
 
-[Unreleased]: https://github.com/unloopedmido/cuekiyo/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/unloopedmido/cuekiyo/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/unloopedmido/cuekiyo/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/unloopedmido/cuekiyo/releases/tag/v1.0.0
