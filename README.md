@@ -1,15 +1,30 @@
-# Anime MV Pipeline
+# Cuekiyo
 
-Local web dashboard for building anime opening/ending music video compilations.
+**Local studio for anime opening and ending compilations — from song cues to finished MV.**
 
-## Stack
+Cuekiyo runs on your machine. Pick shows, choose songs, review sourced clips at each checkpoint, and export a titled compilation — no cloud, no subscription, no upload step.
 
-| Layer | Tech |
-|-------|------|
-| Frontend | React 19, Vite 8, TypeScript, Tailwind 4, shadcn/ui |
-| Backend | FastAPI, SQLite, SQLAlchemy |
-| Media | yt-dlp, ffmpeg/ffprobe (Satori PNG overlays) |
-| Metadata | Jikan API, YouTube via yt-dlp |
+> **Cue** — song cues, video checkpoints, timeline markers, and render gates.  
+> **Kiyo** — clean, quiet clarity.
+
+<!-- Replace with a screen recording before launch -->
+<!-- ![Cuekiyo demo](docs/assets/demo.gif) -->
+
+## Why Cuekiyo
+
+- **Guided workflow** — automatic stages with pauses only where your taste matters (songs, clips, trim, render order)
+- **Local-first** — SQLite + files on disk; your projects stay on your machine
+- **Smart sourcing** — YouTube candidate search with scoring and heatmap-based clip starts
+- **Polished output** — lower-third overlays, crossfades, per-clip export, re-render without re-downloading
+- **Power when you need it** — manual YouTube links, bulk MAL import, templates, unlimited song counts
+
+## Screenshots
+
+Add before public launch (see [docs/assets/README.md](docs/assets/README.md)):
+
+| Dashboard | Project gate | Finished output |
+|-----------|--------------|-----------------|
+| `docs/assets/dashboard.png` | `docs/assets/project-gate.png` | `docs/assets/completed.png` |
 
 ## Requirements
 
@@ -24,6 +39,12 @@ Local web dashboard for building anime opening/ending music video compilations.
 
 ```bash
 sudo pacman -S yt-dlp ffmpeg ttf-dejavu
+```
+
+**macOS (Homebrew)**
+
+```bash
+brew install yt-dlp ffmpeg
 ```
 
 **Windows (winget)**
@@ -67,9 +88,17 @@ Or from the repo root: `npm run dev:frontend`.
 
 Open http://localhost:5173
 
-API docs: http://127.0.0.1:8000/docs
+- API docs: http://127.0.0.1:8000/docs  
+- Health check: http://127.0.0.1:8000/api/system/binaries — all four entries should be available.
 
-Health check: http://127.0.0.1:8000/api/system/binaries — all four entries should be available.
+## How it works
+
+1. **Create a project** — pick anime, song types, overlay style, and sourcing mode
+2. **Select songs** — review theme list, then the pipeline sources YouTube candidates (or you paste links)
+3. **Review clips** — pick one candidate per song; trim start and duration if needed
+4. **Render** — confirm order, composite overlays, export the final MP4
+
+User-gated checkpoints: song selection, candidate review, clip trim (when enabled), and render order. Everything else runs automatically.
 
 ## Settings
 
@@ -80,13 +109,6 @@ Health check: http://127.0.0.1:8000/api/system/binaries — all four entries sho
 **Anime metadata** (primary API and automatic fallback) can also be changed on the **Settings** page. Search and artwork use the selected provider first, then fall back to the other. Opening and ending theme lists still come from Jikan because AniList does not expose them.
 
 Legacy values in `data/settings.json` are still read if present, but env vars take precedence and the Settings UI no longer edits them.
-
-## Pipeline flow
-
-1. Create project → load themes (AniList or Jikan for metadata; Jikan for theme songs)
-2. Select songs → auto-source YouTube candidates
-3. Pick one candidate per song → download through overlay stages
-4. Confirm render order → final MP4
 
 ## Development
 
@@ -100,6 +122,8 @@ npm test             # backend pytest + frontend build/tests
 ```
 
 Frontend lint/format from `frontend/` also use the root configs.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for issue and PR guidelines.
 
 ## Tests
 
@@ -187,6 +211,16 @@ These paths are gitignored. Delete `data/pipeline.db` for a clean slate.
 - Single global job lock — one pipeline job at a time
 - Concat xfade chain is simplified for 2+ clips
 - Retry infers failed stage from the last failed job
+
+## Legal notice
+
+This project is **local personal software** only. It runs on your machine and does not host, distribute, or publish your videos.
+
+**You are solely responsible** for how you use it. You must have the rights or permission to use any anime footage, music, and third-party video (including YouTube content) that you source, download, edit, or export. You must comply with applicable copyright law and the terms of any platforms or services you use (including YouTube's Terms of Service).
+
+The authors and contributors provide this tool **as-is** and are **not affiliated with your output**. They do not endorse, review, or take responsibility for compilations you create.
+
+See [LICENSE](LICENSE) for software warranty terms.
 
 ## License
 

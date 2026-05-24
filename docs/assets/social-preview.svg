@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" fill="none">
+  <rect width="1280" height="640" fill="#0a0a0a"/>
+  <rect x="80" y="80" width="1120" height="480" rx="24" fill="#141414" stroke="#262626" stroke-width="1"/>
+  <text x="120" y="200" font-family="system-ui, sans-serif" font-size="72" font-weight="700" fill="#b8f028">Cue</text>
+  <text x="320" y="200" font-family="system-ui, sans-serif" font-size="72" font-weight="600" fill="#fafafa">kiyo</text>
+  <text x="120" y="280" font-family="system-ui, sans-serif" font-size="28" fill="#a3a3a3">Local studio for anime opening and ending compilations</text>
+  <text x="120" y="340" font-family="system-ui, sans-serif" font-size="20" fill="#737373">From song cues to finished MV  on your machine</text>
+  <rect x="120" y="400" width="1040" height="120" rx="12" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+  <text x="640" y="475" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" fill="#525252">Replace with dashboard screenshot overlay</text>
+</svg>

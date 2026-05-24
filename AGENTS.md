@@ -2,7 +2,7 @@
 
 ## Project
 
-Local anime MV pipeline. One-shot compilation from anime picks to finished video, pausing only at user-gated checkpoints. See `README.md` for setup and manual verification.
+Local anime compilation studio (Cuekiyo). One-shot flow from anime picks to finished video, pausing only at user-gated checkpoints. See `README.md` for setup and manual verification.
 
 ## Architecture
 

@@ -1,9 +1,9 @@
 ---
-name: mv pipeline
-description: A calm local creative studio for one-shot anime MV compilation.
+name: cuekiyo
+description: A calm local creative studio for one-shot anime compilation.
 ---
 
-# mv pipeline Design System
+# Cuekiyo Design System
 
 ## Vision
 
@@ -180,7 +180,7 @@ All animations and transitions are killed at `prefers-reduced-motion: reduce`. V
 | `PageHeader` | Reusable title/description/actions/leading slot |
 | `ProjectMorphHeader` | Cross-page animated header with view transition |
 | `CommandPalette` | cmdk-based command palette |
-| `BrandWordmark` | "mv pipeline" / "mv" logo link |
+| `BrandWordmark` | "Cuekiyo" / "ck" logo link |
 | `LoadingSpinner` | Animated spinner (HugeIcons `Loading03Icon`) |
 
 ### Sidebar utilities

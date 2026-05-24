@@ -1,0 +1,47 @@
+name: Bug report
+description: Something isn't working as expected
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please avoid attaching copyrighted video or full project outputs.
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Create project with ...
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      placeholder: e.g. Linux, Windows 11, macOS 15
+    validations:
+      required: true
+  - type: textarea
+    id: versions
+    attributes:
+      label: Versions
+      description: Python, Node, ffmpeg, yt-dlp if relevant
+      placeholder: |
+        Python 3.14
+        Node 24.x
+        ffmpeg 7.x
+        yt-dlp 2025.x
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Collapsible job log excerpt or terminal output

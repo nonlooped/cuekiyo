@@ -10,7 +10,7 @@ Minimally tech-literate anime and video creators running the app locally on thei
 
 ## Product Purpose
 
-mv pipeline turns a small set of creative inputs (anime picks, song selections, clip choices) into a finished anime MV compilation. The default experience pushes from project creation to output automatically, pausing only at user-gated checkpoints where taste is required. Power-user controls exist behind progressive disclosure, never as the primary path.
+Cuekiyo turns a small set of creative inputs (anime picks, song selections, clip choices) into a finished anime compilation. The default experience pushes from project creation to output automatically, pausing only at user-gated checkpoints where taste is required. Power-user controls exist behind progressive disclosure, never as the primary path.
 
 ## Brand Personality
 
