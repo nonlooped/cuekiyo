@@ -4,5 +4,5 @@ uvicorn[standard]==0.48.0
 sqlalchemy==2.0.50
 pydantic==2.13.4
 httpx==0.28.1
-python-multipart==0.0.29
+python-multipart==0.0.31
 websockets==16.0
